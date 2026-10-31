@@ -13,8 +13,9 @@
 #
 # ## What has to exist before this can work
 #
-#  - the identifiers `app.aaps.client` and `app.aaps.client2`, registered to the team
-#  - an app record in App Store Connect for `app.aaps.client`
+#  - the identifier `org.nightscout.<TEAMID>.aapsclient`, registered to the team
+#    (b-hubit fork: same pattern as Trio's `org.nightscout.<TEAMID>.trio`)
+#  - an app record in App Store Connect for that identifier
 #  - an Internal Testing group with the testers in it
 #  - the four values below, in an environment called `testflight`
 #
@@ -43,9 +44,9 @@ concurrency:
 jobs:
   testflight:
     # Forks have no signing identity and must not run this, even if they somehow held the secrets.
-    if: github.repository == 'nightscout/AndroidAPS'
+    if: github.repository_owner == 'b-hubit'
     runs-on: macos-latest
-    timeout-minutes: 90
+    timeout-minutes: 180
 
     strategy:
       # Both clients, because a tester running two of them needs both updated together - an old
@@ -59,11 +60,9 @@ jobs:
       # bundle ids. The `concurrency` group above is about two runs of the same app racing.
       fail-fast: false
       matrix:
+        # b-hubit fork: one client only. Add AAPSClient2 back here to follow a second person.
         include:
           - scheme: AAPSClient
-            bundle: app.aaps.client
-          - scheme: AAPSClient2
-            bundle: app.aaps.client2
 
     # Holds the four secrets. Give it required reviewers and restrict it to the `ios` branch: in a
     # public repository that approval is the thing standing between a workflow edit and the signing
