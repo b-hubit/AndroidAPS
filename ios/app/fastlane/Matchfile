@@ -1,0 +1,5 @@
+# b-hubit fork: the same Match-Secrets repository and App Store certificate as the Trio and iAPS
+# builds of this organisation.
+git_url("https://github.com/#{ENV['GITHUB_REPOSITORY_OWNER']}/Match-Secrets.git")
+storage_mode("git")
+type("appstore")
