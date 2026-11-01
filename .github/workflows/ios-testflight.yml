@@ -27,6 +27,11 @@ name: iOS TestFlight
 
 on:
   workflow_dispatch:
+    inputs:
+      run_tests:
+        description: 'Run the iOS shell tests on the simulator first (adds ~45 min)'
+        type: boolean
+        default: false
   push:
     tags:
       - 'ios-testflight-*'
@@ -117,20 +122,41 @@ jobs:
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: 'temurin'
-          cache: gradle
 
-      - name: Cache Kotlin/Native
-        uses: actions/cache@v4
+      # b-hubit fork: restore and save the caches as separate steps. actions/cache (and setup-java's
+      # `cache: gradle`) only save when the whole job succeeds, so every failed attempt started cold
+      # again. The Gradle build cache (org.gradle.caching=true) lives in ~/.gradle/caches; the
+      # Kotlin/Native toolchain and its platform library caches in ~/.konan. The key carries the run
+      # id so each run saves a fresh copy, and restore picks the newest.
+      - name: Restore Gradle and Kotlin/Native caches
+        uses: actions/cache/restore@v4
         with:
-          path: ~/.konan
-          key: konan-${{ runner.os }}-${{ hashFiles('gradle/libs.versions.toml') }}
-          restore-keys: konan-${{ runner.os }}-
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            ~/.konan
+          key: kmp-${{ runner.os }}-${{ runner.arch }}-${{ github.run_id }}
+          restore-keys: kmp-${{ runner.os }}-${{ runner.arch }}-
+
+      # b-hubit fork: gradle.properties is sized for a large self-hosted CircleCI machine (8 GB Gradle
+      # heap, 4 GB Kotlin daemon, 12 workers). A GitHub macOS runner has 3 cores and 7 GB, so those
+      # settings drive it into swap. The user-level file overrides the project one.
+      - name: Size Gradle for the runner
+        run: |
+          mkdir -p ~/.gradle
+          {
+            echo "org.gradle.jvmargs=-Xmx4g -XX:+UseParallelGC -Xss4m"
+            echo "org.gradle.workers.max=3"
+            echo "kotlin.daemon.jvm.options=-Xmx2g"
+          } >> ~/.gradle/gradle.properties
+          sysctl -n hw.memsize hw.ncpu
 
       # Runs the eleven `:ios:shell` tests, which no other job does - see `_docs/ios_blockers.md`.
       # They are here rather than nowhere because this is the workflow that hands a build to people:
       # `GuardedByTest` is what keeps a protected action from running without a prompt, and shipping
       # that untested to testers is worse than shipping it untested to a simulator.
       - name: Test the iOS shell
+        if: inputs.run_tests
         run: |
           set -o pipefail
           ./gradlew --console=plain --no-daemon \
@@ -139,6 +165,7 @@ jobs:
       # The task reports SKIPPED off macOS and the build still succeeds, so a green run proves
       # nothing on its own. Fail loudly if these ever stop executing here.
       - name: Assert the iOS tests really ran
+        if: inputs.run_tests
         run: |
           if grep -qE '^> Task :ios:shell:iosSimulatorArm64Test (SKIPPED|NO-SOURCE)' ios-test.log; then
             echo "::error::iOS shell tests were skipped - this job is not testing anything."
@@ -185,11 +212,22 @@ jobs:
           AAPS_SCHEME: ${{ matrix.scheme }}
         run: fastlane testflight_client
 
+      - name: Save Gradle and Kotlin/Native caches
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            ~/.konan
+          key: kmp-${{ runner.os }}-${{ runner.arch }}-${{ github.run_id }}
+
       - name: Keep the logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ios-testflight-logs
+          if-no-files-found: ignore
           path: |
             ios-test.log
             ios/app/build/logs
