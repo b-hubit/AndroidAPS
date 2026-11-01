@@ -13,8 +13,9 @@
 #
 # ## What has to exist before this can work
 #
-#  - the identifiers `app.aaps.client` and `app.aaps.client2`, registered to the team
-#  - an app record in App Store Connect for `app.aaps.client`
+#  - the identifier `org.nightscout.<TEAMID>.aapsclient`, registered to the team
+#    (b-hubit fork: same pattern as Trio's `org.nightscout.<TEAMID>.trio`)
+#  - an app record in App Store Connect for that identifier
 #  - an Internal Testing group with the testers in it
 #  - the four values below, in an environment called `testflight`
 #
@@ -43,9 +44,9 @@ concurrency:
 jobs:
   testflight:
     # Forks have no signing identity and must not run this, even if they somehow held the secrets.
-    if: github.repository == 'nightscout/AndroidAPS'
+    if: github.repository_owner == 'b-hubit'
     runs-on: macos-latest
-    timeout-minutes: 90
+    timeout-minutes: 180
 
     strategy:
       # Both clients, because a tester running two of them needs both updated together - an old
@@ -59,16 +60,15 @@ jobs:
       # bundle ids. The `concurrency` group above is about two runs of the same app racing.
       fail-fast: false
       matrix:
+        # b-hubit fork: one client only. Add AAPSClient2 back here to follow a second person.
         include:
           - scheme: AAPSClient
-            bundle: app.aaps.client
-          - scheme: AAPSClient2
-            bundle: app.aaps.client2
 
     # Holds the four secrets. Give it required reviewers and restrict it to the `ios` branch: in a
     # public repository that approval is the thing standing between a workflow edit and the signing
     # key.
-    environment: testflight
+    # b-hubit fork: no environment - the job reads the organisation secrets shared with the Trio
+    # and iAPS builds (FASTLANE_KEY, FASTLANE_KEY_ID, FASTLANE_ISSUER_ID, TEAMID).
 
     steps:
       - uses: actions/checkout@v5
@@ -86,10 +86,10 @@ jobs:
       # Only emptiness is checked, never a value, so nothing about a secret can reach the log.
       - name: Check the signing secrets are present
         env:
-          KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
-          KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
-          ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          KEY: ${{ secrets.FASTLANE_KEY }}
+          KEY_ID: ${{ secrets.FASTLANE_KEY_ID }}
+          ISSUER_ID: ${{ secrets.FASTLANE_ISSUER_ID }}
+          APPLE_TEAM_ID: ${{ secrets.TEAMID }}
         run: |
           missing=""
           [ -n "$KEY" ]           || missing="$missing APP_STORE_CONNECT_PRIVATE_KEY"
@@ -97,8 +97,8 @@ jobs:
           [ -n "$ISSUER_ID" ]     || missing="$missing APP_STORE_CONNECT_ISSUER_ID"
           [ -n "$APPLE_TEAM_ID" ] || missing="$missing APPLE_TEAM_ID"
           if [ -n "$missing" ]; then
-            echo "::error::Missing secrets in the 'testflight' environment:$missing"
-            echo "Set them on the environment, not the repository, or this job cannot see them."
+            echo "::error::Missing organisation secrets:$missing"
+            echo "Check that the b-hubit organisation secrets are shared with this repository."
             exit 1
           fi
           echo "All four signing secrets are present."
@@ -153,13 +153,13 @@ jobs:
 
       - name: Provide the team id
         env:
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_TEAM_ID: ${{ secrets.TEAMID }}
         run: echo "DEVELOPMENT_TEAM = $APPLE_TEAM_ID" > ios/app/Signing.local.xcconfig
 
       - name: Write the App Store Connect API key
         env:
-          KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
-          KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          KEY: ${{ secrets.FASTLANE_KEY }}
+          KEY_ID: ${{ secrets.FASTLANE_KEY_ID }}
         run: |
           mkdir -p "$RUNNER_TEMP/keys"
           printf '%s' "$KEY" > "$RUNNER_TEMP/keys/AuthKey_${KEY_ID}.p8"
@@ -167,8 +167,8 @@ jobs:
 
       - name: Archive
         env:
-          KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
-          ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          KEY_ID: ${{ secrets.FASTLANE_KEY_ID }}
+          ISSUER_ID: ${{ secrets.FASTLANE_ISSUER_ID }}
         run: |
           set -o pipefail
           # -allowProvisioningUpdates lets Xcode create the distribution certificate and profile
@@ -186,9 +186,9 @@ jobs:
 
       - name: Export and upload to TestFlight
         env:
-          KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
-          ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          KEY_ID: ${{ secrets.FASTLANE_KEY_ID }}
+          ISSUER_ID: ${{ secrets.FASTLANE_ISSUER_ID }}
+          APPLE_TEAM_ID: ${{ secrets.TEAMID }}
         run: |
           set -o pipefail
           # `destination: upload` makes this step do the upload itself, so no separate altool call.
