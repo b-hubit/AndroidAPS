@@ -46,7 +46,7 @@ jobs:
     # Forks have no signing identity and must not run this, even if they somehow held the secrets.
     if: github.repository_owner == 'b-hubit'
     runs-on: macos-latest
-    timeout-minutes: 180
+    timeout-minutes: 300
 
     strategy:
       # Both clients, because a tester running two of them needs both updated together - an old
