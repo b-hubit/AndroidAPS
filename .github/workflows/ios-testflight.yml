@@ -90,18 +90,22 @@ jobs:
           KEY_ID: ${{ secrets.FASTLANE_KEY_ID }}
           ISSUER_ID: ${{ secrets.FASTLANE_ISSUER_ID }}
           APPLE_TEAM_ID: ${{ secrets.TEAMID }}
+          GH_PAT: ${{ secrets.GH_PAT }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
         run: |
           missing=""
-          [ -n "$KEY" ]           || missing="$missing APP_STORE_CONNECT_PRIVATE_KEY"
-          [ -n "$KEY_ID" ]        || missing="$missing APP_STORE_CONNECT_KEY_ID"
-          [ -n "$ISSUER_ID" ]     || missing="$missing APP_STORE_CONNECT_ISSUER_ID"
-          [ -n "$APPLE_TEAM_ID" ] || missing="$missing APPLE_TEAM_ID"
+          [ -n "$KEY" ]           || missing="$missing FASTLANE_KEY"
+          [ -n "$KEY_ID" ]        || missing="$missing FASTLANE_KEY_ID"
+          [ -n "$ISSUER_ID" ]     || missing="$missing FASTLANE_ISSUER_ID"
+          [ -n "$APPLE_TEAM_ID" ] || missing="$missing TEAMID"
+          [ -n "$GH_PAT" ]        || missing="$missing GH_PAT"
+          [ -n "$MATCH_PASSWORD" ] || missing="$missing MATCH_PASSWORD"
           if [ -n "$missing" ]; then
             echo "::error::Missing organisation secrets:$missing"
             echo "Check that the b-hubit organisation secrets are shared with this repository."
             exit 1
           fi
-          echo "All four signing secrets are present."
+          echo "All signing secrets are present."
 
       - name: Load jdk version
         run: |
@@ -156,68 +160,23 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.TEAMID }}
         run: echo "DEVELOPMENT_TEAM = $APPLE_TEAM_ID" > ios/app/Signing.local.xcconfig
 
-      - name: Write the App Store Connect API key
-        env:
-          KEY: ${{ secrets.FASTLANE_KEY }}
-          KEY_ID: ${{ secrets.FASTLANE_KEY_ID }}
-        run: |
-          mkdir -p "$RUNNER_TEMP/keys"
-          printf '%s' "$KEY" > "$RUNNER_TEMP/keys/AuthKey_${KEY_ID}.p8"
-          chmod 600 "$RUNNER_TEMP/keys/AuthKey_${KEY_ID}.p8"
+      # b-hubit fork: signing goes through Fastlane Match (ios/app/fastlane/Fastfile), like the Trio
+      # and iAPS builds, because Xcode automatic signing needs a registered device for its
+      # development profile.
+      - name: Install fastlane
+        run: fastlane --version || sudo gem install fastlane --no-document
 
-      - name: Archive
+      - name: Sign, build and upload to TestFlight
+        working-directory: ios/app
         env:
-          KEY_ID: ${{ secrets.FASTLANE_KEY_ID }}
-          ISSUER_ID: ${{ secrets.FASTLANE_ISSUER_ID }}
-        run: |
-          set -o pipefail
-          # -allowProvisioningUpdates lets Xcode create the distribution certificate and profile
-          # from the API key, so no .p12 or profile has to be stored as a secret.
-          xcodebuild -project ios/app/AAPSClient.xcodeproj \
-            -scheme ${{ matrix.scheme }} \
-            -configuration Release \
-            -destination 'generic/platform=iOS' \
-            -archivePath "$RUNNER_TEMP/${{ matrix.scheme }}.xcarchive" \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath "$RUNNER_TEMP/keys/AuthKey_${KEY_ID}.p8" \
-            -authenticationKeyID "$KEY_ID" \
-            -authenticationKeyIssuerID "$ISSUER_ID" \
-            archive | tee archive.log
-
-      - name: Export and upload to TestFlight
-        env:
-          KEY_ID: ${{ secrets.FASTLANE_KEY_ID }}
-          ISSUER_ID: ${{ secrets.FASTLANE_ISSUER_ID }}
-          APPLE_TEAM_ID: ${{ secrets.TEAMID }}
-        run: |
-          set -o pipefail
-          # `destination: upload` makes this step do the upload itself, so no separate altool call.
-          cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-            <key>method</key><string>app-store-connect</string>
-            <key>destination</key><string>upload</string>
-            <key>teamID</key><string>${APPLE_TEAM_ID}</string>
-            <key>signingStyle</key><string>automatic</string>
-            <key>uploadSymbols</key><true/>
-          </dict>
-          </plist>
-          PLIST
-          xcodebuild -exportArchive \
-            -archivePath "$RUNNER_TEMP/${{ matrix.scheme }}.xcarchive" \
-            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
-            -exportPath "$RUNNER_TEMP/export" \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath "$RUNNER_TEMP/keys/AuthKey_${KEY_ID}.p8" \
-            -authenticationKeyID "$KEY_ID" \
-            -authenticationKeyIssuerID "$ISSUER_ID" | tee export.log
-
-      # The key is a credential with upload rights; do not leave it on a runner that may be reused.
-      - name: Remove the API key
-        if: always()
-        run: rm -rf "$RUNNER_TEMP/keys"
+          TEAMID: ${{ secrets.TEAMID }}
+          FASTLANE_KEY: ${{ secrets.FASTLANE_KEY }}
+          FASTLANE_KEY_ID: ${{ secrets.FASTLANE_KEY_ID }}
+          FASTLANE_ISSUER_ID: ${{ secrets.FASTLANE_ISSUER_ID }}
+          GH_PAT: ${{ secrets.GH_PAT }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          AAPS_SCHEME: ${{ matrix.scheme }}
+        run: fastlane testflight_client
 
       - name: Keep the logs
         if: always()
@@ -226,6 +185,5 @@ jobs:
           name: ios-testflight-logs
           path: |
             ios-test.log
-            archive.log
-            export.log
+            ios/app/build/logs
           retention-days: 7

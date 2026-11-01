@@ -1,0 +1,86 @@
+# b-hubit fork: signs the iOS client with Fastlane Match, like the Trio and iAPS builds of this
+# organisation, instead of Xcode automatic signing.
+#
+# Automatic signing makes `xcodebuild archive` create an Apple Development profile first, and Apple
+# refuses that for a team with no registered devices ("Your team has no devices from which to
+# generate a provisioning profile"). Match uses the App Store distribution certificate already kept in
+# Match-Secrets and an App Store profile, which needs no device.
+#
+# Run from ios/app (the directory holding this fastlane folder) by .github/workflows/ios-testflight.yml.
+
+default_platform(:ios)
+
+ENV["FASTLANE_XCODEBUILD_SETTINGS_TIMEOUT"] = "120"
+
+TEAMID = ENV.fetch("TEAMID")
+OWNER = ENV.fetch("GITHUB_REPOSITORY_OWNER")
+SCHEME = ENV.fetch("AAPS_SCHEME", "AAPSClient")
+BUNDLE_SUFFIX = SCHEME == "AAPSClient2" ? "aapsclient2" : "aapsclient"
+BUNDLE_ID = "org.nightscout.#{TEAMID}.#{BUNDLE_SUFFIX}"
+PROJECT = File.expand_path("../AAPSClient.xcodeproj", __dir__)
+OUTPUT = File.expand_path("../build", __dir__)
+
+platform :ios do
+  desc "Sign with Match, build and upload the iOS client to TestFlight"
+  lane :testflight_client do
+    setup_ci if ENV["CI"]
+
+    api_key = app_store_connect_api_key(
+      key_id: ENV.fetch("FASTLANE_KEY_ID"),
+      issuer_id: ENV.fetch("FASTLANE_ISSUER_ID"),
+      key_content: ENV.fetch("FASTLANE_KEY")
+    )
+
+    # Not read-only: the first run has to create the App Store profile for this bundle id. The
+    # distribution certificate is reused from Match-Secrets, never a new one.
+    match(
+      type: "appstore",
+      readonly: false,
+      api_key: api_key,
+      team_id: TEAMID,
+      app_identifier: [BUNDLE_ID],
+      git_basic_authorization: Base64.strict_encode64("#{OWNER}:#{ENV.fetch('GH_PAT')}")
+    )
+
+    profile = Actions.lane_context[SharedValues::MATCH_PROVISIONING_PROFILE_MAPPING][BUNDLE_ID]
+
+    # The project keeps "Apple Development" for device builds under an sdk-conditional key, which a
+    # manual distribution build must not inherit. Changed on the CI checkout only.
+    pbxproj = File.join(PROJECT, "project.pbxproj")
+    File.write(
+      pbxproj,
+      File.read(pbxproj).gsub('"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Development";',
+                              '"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";')
+    )
+
+    update_code_signing_settings(
+      path: PROJECT,
+      use_automatic_signing: false,
+      team_id: TEAMID,
+      targets: [SCHEME],
+      build_configurations: ["Release"],
+      code_sign_identity: "iPhone Distribution",
+      profile_name: profile,
+      bundle_identifier: BUNDLE_ID
+    )
+
+    gym(
+      project: PROJECT,
+      scheme: SCHEME,
+      configuration: "Release",
+      destination: "generic/platform=iOS",
+      export_method: "app-store",
+      export_options: { provisioningProfiles: { BUNDLE_ID => profile } },
+      output_directory: OUTPUT,
+      output_name: "#{SCHEME}.ipa",
+      buildlog_path: File.join(OUTPUT, "logs")
+    )
+
+    upload_to_testflight(
+      api_key: api_key,
+      app_identifier: BUNDLE_ID,
+      ipa: File.join(OUTPUT, "#{SCHEME}.ipa"),
+      skip_waiting_for_build_processing: true
+    )
+  end
+end
