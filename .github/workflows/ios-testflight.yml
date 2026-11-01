@@ -190,9 +190,15 @@ jobs:
       # The app target links AapsShared.framework, which its "Build shared framework" script phase
       # makes with Gradle. Xcode 26 scans the Swift module dependencies before that phase runs, so a
       # clean archive fails with "unable to resolve module dependency: 'AapsShared'". Build the
-      # device Release framework first; the script phase then finds it up to date.
+      # device framework first; the script phase then finds it up to date.
+      #
+      # b-hubit fork: the Debug framework, not Release. The Release link runs Kotlin/Native's
+      # whole-program optimisation (devirtualisation analysis), which needs more heap than a 7 GB
+      # GitHub macOS runner has: with 8 GB it swapped for over an hour, with 4 GB it stopped with
+      # "OutOfMemoryError: Java heap space". The Fastfile points the Release archive at the Debug
+      # framework to match.
       - name: Build the Kotlin framework for the device
-        run: ./gradlew --console=plain --no-daemon :ios:shell:linkReleaseFrameworkIosArm64
+        run: ./gradlew --console=plain --no-daemon :ios:shell:linkDebugFrameworkIosArm64
 
       # b-hubit fork: signing goes through Fastlane Match (ios/app/fastlane/Fastfile), like the Trio
       # and iAPS builds, because Xcode automatic signing needs a registered device for its
