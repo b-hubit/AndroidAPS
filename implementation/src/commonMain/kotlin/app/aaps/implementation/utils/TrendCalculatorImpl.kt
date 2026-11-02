@@ -11,6 +11,7 @@ import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesBinding
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
+import kotlin.time.Clock
 
 @ContributesBinding(AppScope::class)
 @SingleIn(AppScope::class)
@@ -25,7 +26,7 @@ class TrendCalculatorImpl(
         // Custom build: show the arrow supplied by the CGM source (e.g. Dexcom, via xDrip) when it is current.
         // Smoothing plugins clear trendArrow on the bucketed data, so read it from the raw reading. The bucketed
         // data is null until there are 3 readings, the source arrow must not depend on it.
-        if (data.isNullOrEmpty()) return sourceArrow(readings, System.currentTimeMillis())
+        if (data.isNullOrEmpty()) return sourceArrow(readings, Clock.System.now().toEpochMilliseconds())
         sourceArrow(readings, data[0].timestamp)?.let { return it }
         return calculateDirection(data)
     }
