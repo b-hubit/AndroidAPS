@@ -1,5 +1,6 @@
 package app.aaps.ios.shell
 
+import kotlinx.coroutines.Job
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
 import app.aaps.core.interfaces.plugin.PluginBase
@@ -33,7 +34,8 @@ internal class IosAppStartup(
     private val startPeriodicWork: () -> Unit
 ) {
 
-    fun run() {
+    /** Returns the plugin start jobs, so the caller can act once they are done without blocking here. */
+    fun run(): List<Job> {
         // Before anything else: a screen that renders before this has run shows string names rather
         // than text, and the plugin list below builds plugin descriptions that carry names.
         GeneratedStringOwners.registerAll()
@@ -58,7 +60,7 @@ internal class IosAppStartup(
         // a `runBlocking` that can freeze the UI for as long as the slowest driver's `onStart` - worse
         // than the race it closes. Whoever wires up the splash screen described above should move this
         // off the main thread and then wait, like Android does.
-        registry.initializeConfig()
+        val pluginJobs = registry.initializeConfig()
 
         // The periodic housekeeping Android gets from KeepAliveWorker: the missed-reading alarm,
         // snooze shortening, and log and database trimming. The work is shared; only the trigger is
@@ -67,5 +69,6 @@ internal class IosAppStartup(
         startPeriodicWork()
 
         aapsLogger.debug(LTag.CORE, "Plugins started and selection verified, starting the UI")
+        return pluginJobs
     }
 }

@@ -35,4 +35,6 @@ enum class NsclientLongKey(
     EffectiveProfileSwitchLastSyncedId("ns_effective_profile_switch_last_synced_id", 0L),
     RunningModeLastSyncedId("ns_running_mode_last_synced_id", 0L),
     ProfileStoreLastSyncedId("ns_profile_store_last_synced_timestamp", 0L),
+    /** Performance test (ios-perf-test): newest srvModified of the device statuses a client has loaded. */
+    DeviceStatusLastLoadedSrvModified("ns_device_status_last_loaded_srv_modified", 0L),
 }

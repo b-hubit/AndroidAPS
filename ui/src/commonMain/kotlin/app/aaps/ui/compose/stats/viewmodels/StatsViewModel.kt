@@ -1,5 +1,6 @@
 package app.aaps.ui.compose.stats.viewmodels
 
+import kotlin.concurrent.Volatile
 import androidx.collection.LongSparseArray
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
@@ -107,6 +108,13 @@ class StatsViewModel(
      */
     private val loadedTabs = mutableSetOf<StatsTab>()
 
+    /**
+     * Whether the statistics screen is shown. Performance test (ios-perf-test): this view model is built
+     * with the home screen, and it recalculated seven days of TDD after every burst of database changes -
+     * every few seconds during a sync - for a screen that was not open.
+     */
+    @Volatile private var onScreen = false
+
     init {
         val savedTab = StatsTab.entries.firstOrNull { it.name == preferences.get(StringNonKey.StatsTab) } ?: StatsTab.entries.first()
         _uiState.update {
@@ -120,8 +128,14 @@ class StatsViewModel(
 
     /** The screen is shown again: recalculate the tab on screen, and the others when they are opened. */
     fun onStart() {
+        onScreen = true
         loadedTabs.clear()
         loadTab(uiState.value.selectedTab)
+    }
+
+    /** The screen is no longer shown: changes only mark the numbers stale until it is shown again. */
+    fun onStop() {
+        onScreen = false
     }
 
     /** The user opened [tab]. It is remembered, so the screen opens on it next time. */
@@ -185,7 +199,7 @@ class StatsViewModel(
             .debounce(TDD_RELOAD_DEBOUNCE_MS)
             .onEach {
                 // Recalculated now only when on screen; otherwise when the Insulin tab is opened next time
-                if (uiState.value.selectedTab == StatsTab.INSULIN) loadTddStats()
+                if (onScreen && uiState.value.selectedTab == StatsTab.INSULIN) loadTddStats()
                 else loadedTabs -= StatsTab.INSULIN
             }
             .launchIn(viewModelScope)
