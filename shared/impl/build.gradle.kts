@@ -26,6 +26,8 @@ kotlin {
                 implementation(project(":core:data"))
                 implementation(project(":core:interfaces"))
                 implementation(project(":core:keys"))
+                // ios-perf-test: SystemTimeZone (DateUtilImpl). Was in androidMain only.
+                implementation(project(":core:utils"))
                 // EncryptedKeyValueStore. The multiplatform core only, not datastore-preferences: the
                 // store has its own encrypted file format instead of the preferences protobuf.
                 api(libs.androidx.datastore.core)
