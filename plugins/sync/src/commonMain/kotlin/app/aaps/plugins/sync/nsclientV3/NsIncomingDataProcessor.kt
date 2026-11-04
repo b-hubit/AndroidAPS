@@ -117,7 +117,7 @@ class NsIncomingDataProcessor(
         if (!acceptsGlucose(doFullSync)) return false
 
         var latestDateInReceivedData: Long = 0
-        aapsLogger.debug(LTag.NSCLIENT, "Received NS Data: $sgvs")
+        aapsLogger.debug(LTag.NSCLIENT) { "Received NS Data: ${(sgvs as? List<*>)?.size ?: 1} records" }
         val glucoseValues = mutableListOf<GV>()
 
         if (sgvs is List<*>) { // V3 client
@@ -267,7 +267,7 @@ class NsIncomingDataProcessor(
     }
 
     fun processFood(data: Any) {
-        aapsLogger.debug(LTag.NSCLIENT, "Received Food Data: $data")
+        aapsLogger.debug(LTag.NSCLIENT) { "Received Food Data: ${(data as? List<*>)?.size ?: 1} records" }
 
         try {
             val foods = mutableListOf<FD>()

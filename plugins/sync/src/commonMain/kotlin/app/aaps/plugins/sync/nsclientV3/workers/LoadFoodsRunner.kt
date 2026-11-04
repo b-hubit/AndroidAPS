@@ -33,7 +33,7 @@ class LoadFoodsRunner(
         try {
             if (nsClientV3Plugin.lastLoadedSrvModified.collections.foods++ % 5 == 0L) {
                 val foods: List<NSFood> = nsAndroidClient.getFoods(1000).values
-                aapsLogger.debug(LTag.NSCLIENT, "FOODS: $foods")
+                aapsLogger.debug(LTag.NSCLIENT) { "FOODS: ${foods.size} records" }
                 nsClientRepository.addLog("◄ RCV", "${foods.size} FOODs")
                 // Schedule processing of fetched data
                 nsIncomingDataProcessor.processFood(foods)

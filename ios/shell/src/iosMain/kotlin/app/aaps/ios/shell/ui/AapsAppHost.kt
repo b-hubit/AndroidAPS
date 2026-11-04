@@ -1,5 +1,6 @@
 package app.aaps.ios.shell.ui
 
+import kotlin.time.TimeSource
 import androidx.compose.foundation.Image
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -160,6 +161,8 @@ private class StartedApp(
  * And so that the screen can call this again.
  */
 private fun startApp(nsSocketFactory: NsSocketFactory): StartedApp {
+    // Performance test (ios-perf-test): time from here to the first screen, in aaps.log as "PERF".
+    val startMark = TimeSource.Monotonic.markNow()
     val store = IosStorage.open()
     // Built once, outside the composition: a graph rebuilt on each recomposition would hand out new
     // singletons every frame - a new database wrapper, a new preference store.
@@ -206,6 +209,7 @@ private fun startApp(nsSocketFactory: NsSocketFactory): StartedApp {
     val appIcon = loadAppIcon()
     if (appIcon == null) logger.error(LTag.CORE, "The app bundle gave no icon; showing the plain AAPS mark")
     logger.debug(LTag.CORE, "Starting the AAPS Compose root on iOS")
+    logger.info(LTag.CORE, "PERF app start (graph, plugins, settings) before the first screen: ${startMark.elapsedNow().inWholeMilliseconds} ms")
 
     // A change made just before the app went to the background may still wait for its background save,
     // and iOS can end a suspended app without a word. Same placement and the same UIKit reason as above.

@@ -236,9 +236,9 @@ class NSClientV3Plugin(
     internal var initialLoadFinished = false
 
     /**
-     * AAPSCLIENT: the newest srvModified of the device statuses loaded so far, see LoadDeviceStatusRunner. Not
-     * stored: after a start the client loads the last 48 hours again, so a database that lost its loop
-     * results gets them back.
+     * AAPSCLIENT: the newest srvModified of the device statuses loaded so far, see LoadDeviceStatusRunner.
+     * Performance test (ios-perf-test): stored, so a start loads only what is new (and the last 15 minutes)
+     * instead of 48 hours. A database reset or full sync clears it (resetToFullSync), and 48 hours load again.
      */
     internal var lastLoadedDeviceStatusSrvModified = 0L
 
@@ -264,6 +264,12 @@ class NSClientV3Plugin(
         super.onStart()
 
         lastLoadedSrvModified = Json.decodeFromString(preferences.get(NsclientStringKey.V3LastModified))
+        // Performance test (ios-perf-test): both survive a restart. iOS ends a backgrounded app often, and
+        // each start then began the first load again from 100 days back, and reloaded 48 hours of
+        // device statuses. A full sync or a database reset still clears both (resetToFullSync).
+        firstLoadContinueTimestamp = runCatching { Json.decodeFromString(LastModified.serializer(), preferences.get(NsclientStringKey.V3FirstLoadContinue)) }
+            .getOrDefault(LastModified(LastModified.Collections()))
+        lastLoadedDeviceStatusSrvModified = preferences.get(NsclientLongKey.DeviceStatusLastLoadedSrvModified)
 
         setClient()
 
@@ -732,11 +738,17 @@ class NSClientV3Plugin(
         }
 
     override fun updateLatestBgReceivedIfNewer(latestReceived: Long) {
-        if (isFirstLoad(NsClient.Collection.ENTRIES)) firstLoadContinueTimestamp.collections.entries = latestReceived
+        if (isFirstLoad(NsClient.Collection.ENTRIES)) {
+            firstLoadContinueTimestamp.collections.entries = latestReceived
+            storeFirstLoadContinue()
+        }
     }
 
     override fun updateLatestTreatmentReceivedIfNewer(latestReceived: Long) {
-        if (isFirstLoad(NsClient.Collection.TREATMENTS)) firstLoadContinueTimestamp.collections.treatments = latestReceived
+        if (isFirstLoad(NsClient.Collection.TREATMENTS)) {
+            firstLoadContinueTimestamp.collections.treatments = latestReceived
+            storeFirstLoadContinue()
+        }
     }
 
     override suspend fun resetToFullSync() {
@@ -745,6 +757,8 @@ class NSClientV3Plugin(
         lastLoadedDeviceStatusSrvModified = 0L
         initialLoadFinished = false
         storeLastLoadedSrvModified()
+        storeFirstLoadContinue()
+        preferences.put(NsclientLongKey.DeviceStatusLastLoadedSrvModified, 0L)
         dataSyncSelectorV3.resetToNextFullSync()
         fullSyncRequested.store(true)
     }
@@ -1186,6 +1200,10 @@ class NSClientV3Plugin(
 
     fun storeLastLoadedSrvModified() {
         preferences.put(NsclientStringKey.V3LastModified, Json.encodeToString(LastModified.serializer(), lastLoadedSrvModified))
+    }
+
+    private fun storeFirstLoadContinue() {
+        preferences.put(NsclientStringKey.V3FirstLoadContinue, Json.encodeToString(LastModified.serializer(), firstLoadContinueTimestamp))
     }
 
     internal fun executeLoop(origin: String) {

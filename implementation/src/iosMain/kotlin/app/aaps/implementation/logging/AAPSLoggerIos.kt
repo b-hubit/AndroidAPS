@@ -21,6 +21,14 @@ import platform.Foundation.dataUsingEncoding
 import platform.Foundation.fileHandleForWritingAtPath
 import platform.Foundation.seekToEndOfFile
 import platform.Foundation.writeData
+import kotlin.concurrent.atomics.AtomicBoolean
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.launch
 
 /**
  * Logging on iOS: the console for looking at now, a file for looking at later.
@@ -120,10 +128,13 @@ class AAPSLoggerIos(
         if (gated && tag != null && !enabled(tag)) return
 
         val line = "${timestamps.stringFromDate(NSDate())} $level ${tag?.tag ?: "CORE"}: $message"
+        // Performance test (ios-perf-test): the console gets warnings and errors only. NSLog is
+        // synchronous and slow, and it ran for every debug line on the thread doing the work - during a
+        // sync that is tens of thousands of lines. The file below still gets every line.
         // NSLog is a C varargs function, so `%@` needs a real Obj-C object. Passing the Kotlin
         // String straight through segfaults - it is not boxed into an NSString on the way.
-        NSLog("%@", NSString.create(string = line))
-        appendToFile(line)
+        if (level == "ERROR" || level == "WARN") NSLog("%@", NSString.create(string = line))
+        logPath()?.let { LogFileWriter.forPath(it, maxBytes).enqueue(line) }
     }
 
     /**
@@ -149,26 +160,94 @@ class AAPSLoggerIos(
         return out.toString()
     }
 
-    private fun appendToFile(line: String) {
-        val path = logPath() ?: return
-        val manager = NSFileManager.defaultManager
-        rotateIfNeeded(manager, path)
-        if (!manager.fileExistsAtPath(path)) manager.createFileAtPath(path, null, null)
+    /**
+     * Writes log lines in the background, one writer per file.
+     *
+     * Performance test (ios-perf-test). Each line used to look the file's size up, open it, seek to the
+     * end, write and close it, synchronously on the calling thread. Now lines go into a queue and one
+     * background coroutine writes whatever has gathered in one go, through a handle that stays open.
+     * One writer per path, because two loggers write the same `aaps.log` (the graph's and the settings
+     * store's) and two open handles would overwrite each other's lines.
+     */
+    private class LogFileWriter(private val path: String, private val maxBytes: Long) {
 
-        val data = (line + "\n").let { NSString.create(string = it) }.dataUsingEncoding(NSUTF8StringEncoding) ?: return
-        val handle = NSFileHandle.fileHandleForWritingAtPath(path) ?: return
-        handle.seekToEndOfFile()
-        handle.writeData(data)
-        handle.closeFile()
-    }
+        private val lines = Channel<String>(Channel.UNLIMITED)
+        private var handle: NSFileHandle? = null
+        private var written = 0L
 
-    /** Keeps one previous file, so the worst case on disk is twice [maxBytes]. */
-    private fun rotateIfNeeded(manager: NSFileManager, path: String) {
-        val size = (manager.attributesOfItemAtPath(path, null)?.get("NSFileSize") as? Number)?.toLong() ?: return
-        if (size < maxBytes) return
-        val previous = "$path.1"
-        manager.removeItemAtPath(previous, null)
-        manager.moveItemAtPath(path, previous, null)
+        init {
+            CoroutineScope(Dispatchers.IO.limitedParallelism(1) + SupervisorJob()).launch {
+                val batch = StringBuilder()
+                for (first in lines) {
+                    batch.append(first).append('\n')
+                    // Everything already queued goes out in the same write.
+                    while (batch.length < BATCH_CHARS) {
+                        val next = lines.tryReceive().getOrNull() ?: break
+                        batch.append(next).append('\n')
+                    }
+                    runCatching { write(batch.toString()) }
+                    batch.clear()
+                }
+            }
+        }
+
+        fun enqueue(line: String) {
+            lines.trySend(line)
+        }
+
+        private fun write(text: String) {
+            val data = NSString.create(string = text).dataUsingEncoding(NSUTF8StringEncoding) ?: return
+            val out = handle ?: open() ?: return
+            out.writeData(data)
+            written += data.length.toLong()
+            if (written >= maxBytes) rotate()
+        }
+
+        private fun open(): NSFileHandle? {
+            val manager = NSFileManager.defaultManager
+            if (!manager.fileExistsAtPath(path)) manager.createFileAtPath(path, null, null)
+            written = (manager.attributesOfItemAtPath(path, null)?.get("NSFileSize") as? Number)?.toLong() ?: 0L
+            if (written >= maxBytes) {
+                rotateFile(manager)
+                manager.createFileAtPath(path, null, null)
+                written = 0L
+            }
+            return NSFileHandle.fileHandleForWritingAtPath(path)?.also {
+                it.seekToEndOfFile()
+                handle = it
+            }
+        }
+
+        /** Keeps one previous file, so the worst case on disk is twice [maxBytes]. */
+        private fun rotate() {
+            handle?.closeFile()
+            handle = null
+            rotateFile(NSFileManager.defaultManager)
+        }
+
+        private fun rotateFile(manager: NSFileManager) {
+            val previous = "$path.1"
+            manager.removeItemAtPath(previous, null)
+            manager.moveItemAtPath(path, previous, null)
+        }
+
+        companion object {
+            private const val BATCH_CHARS = 64 * 1024
+            private val writers = mutableMapOf<String, LogFileWriter>()
+            @OptIn(ExperimentalAtomicApi::class)
+            private val lock = AtomicBoolean(false)
+
+            @OptIn(ExperimentalAtomicApi::class)
+            fun forPath(path: String, maxBytes: Long): LogFileWriter {
+                // A spin lock rather than `synchronized`, which is JVM only. Held for a map lookup.
+                while (!lock.compareAndSet(false, true)) Unit
+                try {
+                    return writers.getOrPut(path) { LogFileWriter(path, maxBytes) }
+                } finally {
+                    lock.store(false)
+                }
+            }
+        }
     }
 
     private fun logPath(): String? {
