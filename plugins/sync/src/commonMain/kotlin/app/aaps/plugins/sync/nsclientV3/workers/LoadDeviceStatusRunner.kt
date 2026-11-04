@@ -71,7 +71,7 @@ class LoadDeviceStatusRunner(
      * while this phone was offline. A day holds about 300, so they come in pages.
      */
     private suspend fun loadAllSinceLastLoad(nsAndroidClient: NSAndroidClient) {
-        // Performance test (ios-perf-test): the position is kept across restarts, so a start no longer reloads
+        // b-hubit fork: the position is kept across restarts, so a start no longer reloads
         // 48 hours. Still at least the last 15 minutes: after a start the pump, uploader and loop status on
         // screen are empty until a device status arrives, and the master may not send one for 5 minutes.
         val now = dateUtil.now()

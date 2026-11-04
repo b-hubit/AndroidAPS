@@ -109,7 +109,7 @@ class StatsViewModel(
     private val loadedTabs = mutableSetOf<StatsTab>()
 
     /**
-     * Whether the statistics screen is shown. Performance test (ios-perf-test): this view model is built
+     * Whether the statistics screen is shown. b-hubit fork: this view model is built
      * with the home screen, and it recalculated seven days of TDD after every burst of database changes -
      * every few seconds during a sync - for a screen that was not open.
      */

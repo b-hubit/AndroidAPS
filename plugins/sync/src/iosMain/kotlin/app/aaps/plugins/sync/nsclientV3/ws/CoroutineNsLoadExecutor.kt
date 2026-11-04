@@ -1,6 +1,5 @@
 package app.aaps.plugins.sync.nsclientV3.ws
 
-import kotlin.time.TimeSource
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
 import app.aaps.core.objects.workflow.WorkOutcome
@@ -72,18 +71,12 @@ class CoroutineNsLoadExecutor(
     override fun runChain(steps: List<NsLoadStep>) {
         if (steps.isEmpty()) return
         replaceRound {
-            // Performance test (ios-perf-test): how long a whole round takes, in aaps.log as "PERF".
-            val roundStart = TimeSource.Monotonic.markNow()
-            try {
-                for (step in steps) {
-                    if (!isActive) return@replaceRound
-                    // Stops at the first step that fails, as the WorkManager chain does: a later step
-                    // usually depends on what an earlier one wrote. A *skipped* step is not a failure -
-                    // see NsLoadChain, which is where that rule is tested.
-                    if (!NsLoadChain.shouldContinue(runStep(step))) return@replaceRound
-                }
-            } finally {
-                aapsLogger.info(LTag.CORE, "PERF sync round ${steps.size} steps: ${roundStart.elapsedNow().inWholeMilliseconds} ms")
+            for (step in steps) {
+                if (!isActive) return@replaceRound
+                // Stops at the first step that fails, as the WorkManager chain does: a later step
+                // usually depends on what an earlier one wrote. A *skipped* step is not a failure -
+                // see NsLoadChain, which is where that rule is tested.
+                if (!NsLoadChain.shouldContinue(runStep(step))) return@replaceRound
             }
         }
     }
@@ -116,7 +109,6 @@ class CoroutineNsLoadExecutor(
     }
 
     private suspend fun runStep(step: NsLoadStep): WorkOutcome {
-        val stepStart = TimeSource.Monotonic.markNow()
         val outcome = when (step) {
             NsLoadStep.STATUS            -> loadStatus().run()
             NsLoadStep.LAST_MODIFICATION -> loadLastModification().run()
@@ -128,7 +120,6 @@ class CoroutineNsLoadExecutor(
             NsLoadStep.DEVICE_STATUS     -> loadDeviceStatus().run()
             NsLoadStep.DATA_SYNC         -> dataSync().run()
         }
-        aapsLogger.info(LTag.CORE, "PERF sync step $step: ${stepStart.elapsedNow().inWholeMilliseconds} ms (${outcome::class.simpleName})")
         if (outcome is WorkOutcome.Failure) {
             aapsLogger.debug(LTag.NSCLIENT, "Load step $step failed, stopping the round: ${outcome.reason}")
         }

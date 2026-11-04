@@ -2,7 +2,6 @@ package app.aaps.ios.shell.ui
 
 import kotlinx.coroutines.joinAll
 import app.aaps.core.interfaces.rx.events.EventAppInitialized
-import kotlin.time.TimeSource
 import androidx.compose.foundation.Image
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -163,8 +162,6 @@ private class StartedApp(
  * And so that the screen can call this again.
  */
 private fun startApp(nsSocketFactory: NsSocketFactory): StartedApp {
-    // Performance test (ios-perf-test): time from here to the first screen, in aaps.log as "PERF".
-    val startMark = TimeSource.Monotonic.markNow()
     val store = IosStorage.open()
     // Built once, outside the composition: a graph rebuilt on each recomposition would hand out new
     // singletons every frame - a new database wrapper, a new preference store.
@@ -176,14 +173,14 @@ private fun startApp(nsSocketFactory: NsSocketFactory): StartedApp {
     // an empty plugin list there throws from a coroutine and takes the process with it.
     val pluginJobs = IosAppStartup(logger, PluginStoreRegistry(graph.pluginStore, graph.configBuilder), graph.contributedPlugins) { graph.periodicMaintenance.start(graph.appScope) }.run()
 
-    // Performance test (ios-perf-test): announce the app as initialized once the plugins have started, as
+    // b-hubit fork: announce the app as initialized once the plugins have started, as
     // Android's MainApp does at the end of its start. Nothing sent this on iOS, and it is what starts the
     // first IOB/COB calculation (IobCobCalculatorPlugin) - so after a start the graph waited for the next
     // glucose reading, up to five minutes, before it showed IOB and COB. After the plugin jobs, because
     // the calculator subscribes to the event in its own start and a send before that would be missed.
     graph.appScope.launch {
         pluginJobs.joinAll()
-        logger.info(LTag.CORE, "PERF plugins started: ${startMark.elapsedNow().inWholeMilliseconds} ms after start, sending EventAppInitialized")
+        logger.debug(LTag.CORE, "Plugins started, sending EventAppInitialized")
         graph.rxBus.send(EventAppInitialized())
     }
 
@@ -222,7 +219,6 @@ private fun startApp(nsSocketFactory: NsSocketFactory): StartedApp {
     val appIcon = loadAppIcon()
     if (appIcon == null) logger.error(LTag.CORE, "The app bundle gave no icon; showing the plain AAPS mark")
     logger.debug(LTag.CORE, "Starting the AAPS Compose root on iOS")
-    logger.info(LTag.CORE, "PERF app start (graph, plugins, settings) before the first screen: ${startMark.elapsedNow().inWholeMilliseconds} ms")
 
     // A change made just before the app went to the background may still wait for its background save,
     // and iOS can end a suspended app without a word. Same placement and the same UIKit reason as above.

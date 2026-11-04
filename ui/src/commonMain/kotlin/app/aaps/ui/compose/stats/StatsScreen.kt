@@ -73,7 +73,7 @@ fun StatsScreen(
     LaunchedEffect(lifecycleOwner) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
             viewModel.onStart()
-            // Performance test (ios-perf-test): tell the view model when the screen goes away, so it stops
+            // b-hubit fork: tell the view model when the screen goes away, so it stops
             // recalculating for a screen nobody looks at.
             try {
                 awaitCancellation()

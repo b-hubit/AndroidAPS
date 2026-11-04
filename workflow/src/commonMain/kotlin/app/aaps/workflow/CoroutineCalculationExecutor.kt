@@ -1,6 +1,5 @@
 package app.aaps.workflow
 
-import kotlin.time.TimeSource
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
 import app.aaps.core.interfaces.workflow.CalculationWakeLock
@@ -194,18 +193,15 @@ class CoroutineCalculationExecutor(
      * Android, so one bad calculation would end the whole app, and the pump connection with it.
      * Throwable rather than Exception for the same reason: the worker caught everything.
      */
-    private suspend fun runPhase(phase: String, job: String, body: suspend () -> WorkOutcome): WorkOutcome {
-        // Performance test (ios-perf-test): how long each calculation phase takes, in aaps.log as "PERF".
-        val mark = TimeSource.Monotonic.markNow()
-        return try {
-            body().also { aapsLogger.info(LTag.CORE, "PERF calculation $job $phase: ${mark.elapsedNow().inWholeMilliseconds} ms (${it::class.simpleName})") }
+    private suspend fun runPhase(phase: String, job: String, body: suspend () -> WorkOutcome): WorkOutcome =
+        try {
+            body()
         } catch (e: CancellationException) {
             throw e
         } catch (e: Throwable) {
             aapsLogger.error(LTag.WORKER, "Calculation $job: $phase phase failed", e)
             WorkOutcome.Failure("$phase phase threw $e")
         }
-    }
 
     override fun keepAwake(timeout: Duration): CalculationWakeLock.Held? = wakeLock?.acquire(timeout.inWholeMilliseconds)
 

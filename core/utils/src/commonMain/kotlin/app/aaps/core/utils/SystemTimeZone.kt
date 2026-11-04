@@ -7,7 +7,7 @@ import kotlin.time.TimeSource
 /**
  * The system time zone, read again at most every [MAX_AGE_MS] instead of on every call.
  *
- * Performance test (ios-perf-test). On iOS, `TimeZone.currentSystemDefault()` resets Foundation's cached
+ * b-hubit fork. On iOS, `TimeZone.currentSystemDefault()` resets Foundation's cached
  * system zone, then reads the zone's file from disk and parses it - on every call, with no cache in
  * kotlinx-datetime (0.8.0, `core/darwin/src/internal/TimeZoneNative.kt` and `TzdbOnFilesystem.rulesForId`).
  * The IOB calculation asks for it once for every basal rate it looks up, tens of thousands of times a

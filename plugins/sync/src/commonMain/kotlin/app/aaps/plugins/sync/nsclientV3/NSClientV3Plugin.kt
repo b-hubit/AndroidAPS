@@ -237,7 +237,7 @@ class NSClientV3Plugin(
 
     /**
      * AAPSCLIENT: the newest srvModified of the device statuses loaded so far, see LoadDeviceStatusRunner.
-     * Performance test (ios-perf-test): stored, so a start loads only what is new (and the last 15 minutes)
+     * b-hubit fork: stored, so a start loads only what is new (and the last 15 minutes)
      * instead of 48 hours. A database reset or full sync clears it (resetToFullSync), and 48 hours load again.
      */
     internal var lastLoadedDeviceStatusSrvModified = 0L
@@ -264,7 +264,7 @@ class NSClientV3Plugin(
         super.onStart()
 
         lastLoadedSrvModified = Json.decodeFromString(preferences.get(NsclientStringKey.V3LastModified))
-        // Performance test (ios-perf-test): both survive a restart. iOS ends a backgrounded app often, and
+        // b-hubit fork: both survive a restart. iOS ends a backgrounded app often, and
         // each start then began the first load again from 100 days back, and reloaded 48 hours of
         // device statuses. A full sync or a database reset still clears both (resetToFullSync).
         firstLoadContinueTimestamp = runCatching { Json.decodeFromString(LastModified.serializer(), preferences.get(NsclientStringKey.V3FirstLoadContinue)) }

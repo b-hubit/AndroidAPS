@@ -128,7 +128,7 @@ class AAPSLoggerIos(
         if (gated && tag != null && !enabled(tag)) return
 
         val line = "${timestamps.stringFromDate(NSDate())} $level ${tag?.tag ?: "CORE"}: $message"
-        // Performance test (ios-perf-test): the console gets warnings and errors only. NSLog is
+        // b-hubit fork: the console gets warnings and errors only. NSLog is
         // synchronous and slow, and it ran for every debug line on the thread doing the work - during a
         // sync that is tens of thousands of lines. The file below still gets every line.
         // NSLog is a C varargs function, so `%@` needs a real Obj-C object. Passing the Kotlin
@@ -163,7 +163,7 @@ class AAPSLoggerIos(
     /**
      * Writes log lines in the background, one writer per file.
      *
-     * Performance test (ios-perf-test). Each line used to look the file's size up, open it, seek to the
+     * b-hubit fork. Each line used to look the file's size up, open it, seek to the
      * end, write and close it, synchronously on the calling thread. Now lines go into a queue and one
      * background coroutine writes whatever has gathered in one go, through a handle that stays open.
      * One writer per path, because two loggers write the same `aaps.log` (the graph's and the settings

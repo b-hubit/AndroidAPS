@@ -19,6 +19,6 @@ enum class NsclientStringKey(
 
     V3LastModified("ns_client_v3_last_modified", Json.encodeToString(LastModified.serializer(), LastModified(LastModified.Collections()))),
 
-    /** Performance test (ios-perf-test): how far the first load got, so a restart continues it instead of starting again. */
+    /** b-hubit fork: how far the first load got, so a restart continues it instead of starting again. */
     V3FirstLoadContinue("ns_client_v3_first_load_continue", Json.encodeToString(LastModified.serializer(), LastModified(LastModified.Collections())))
 }
