@@ -58,7 +58,7 @@ class LoadTreatmentsRunner(
                         nsClientV3Plugin.storeLastLoadedSrvModified()
                     }
                     treatments = response.values
-                    aapsLogger.debug(LTag.NSCLIENT, "TREATMENTS: $treatments")
+                    aapsLogger.debug(LTag.NSCLIENT) { "TREATMENTS: ${treatments.size} records" }
                     if (treatments.isNotEmpty()) {
                         val action = if (isFirstLoad) "RCV-F" else "RCV"
                         nsClientRepository.addLog("◄ $action", "${treatments.size} TRs from ${dateUtil.dateAndTimeAndSecondsString(lastLoaded)}")

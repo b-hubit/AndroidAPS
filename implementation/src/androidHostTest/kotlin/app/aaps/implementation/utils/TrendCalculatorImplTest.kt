@@ -1,6 +1,8 @@
 package app.aaps.implementation.utils
 
 import app.aaps.core.data.iob.InMemoryGlucoseValue
+import app.aaps.core.data.model.GV
+import app.aaps.core.data.model.SourceSensor
 import app.aaps.core.data.model.TrendArrow
 import app.aaps.core.interfaces.aps.AutosensDataStore
 import app.aaps.shared.tests.TestBase
@@ -310,6 +312,55 @@ class TrendCalculatorImplTest : TestBase() {
         whenever(autosensDataStore.getBucketedDataTableCopy()).thenReturn(data)
         assertThat(trendCalculator.getTrendArrow(autosensDataStore)).isEqualTo(TrendArrow.SINGLE_UP)
     }
+
+    @Test
+    fun `getTrendArrow prefers current source arrow over calculated one`() {
+        val data = mutableListOf(
+            createGlucoseValue(100.0, 300000L, recalculated = 80.0), // would calculate DOUBLE_DOWN
+            createGlucoseValue(100.0, 0L, recalculated = 100.0)
+        )
+        whenever(autosensDataStore.getBucketedDataTableCopy()).thenReturn(data)
+        whenever(autosensDataStore.getBgReadingsDataTableCopy()).thenReturn(listOf(rawReading(300000L, TrendArrow.FLAT)))
+        assertThat(trendCalculator.getTrendArrow(autosensDataStore)).isEqualTo(TrendArrow.FLAT)
+    }
+
+    @Test
+    fun `getTrendArrow ignores stale source arrow`() {
+        val data = mutableListOf(
+            createGlucoseValue(100.0, 1_200_000L, recalculated = 80.0),
+            createGlucoseValue(100.0, 900_000L, recalculated = 100.0)
+        )
+        whenever(autosensDataStore.getBucketedDataTableCopy()).thenReturn(data)
+        whenever(autosensDataStore.getBgReadingsDataTableCopy()).thenReturn(listOf(rawReading(0L, TrendArrow.FLAT)))
+        assertThat(trendCalculator.getTrendArrow(autosensDataStore)).isEqualTo(TrendArrow.DOUBLE_DOWN)
+    }
+
+    @Test
+    fun `getTrendArrow calculates when source arrow is NONE`() {
+        val data = mutableListOf(
+            createGlucoseValue(100.0, 300000L, recalculated = 80.0),
+            createGlucoseValue(100.0, 0L, recalculated = 100.0)
+        )
+        whenever(autosensDataStore.getBucketedDataTableCopy()).thenReturn(data)
+        whenever(autosensDataStore.getBgReadingsDataTableCopy()).thenReturn(listOf(rawReading(300000L, TrendArrow.NONE)))
+        assertThat(trendCalculator.getTrendArrow(autosensDataStore)).isEqualTo(TrendArrow.DOUBLE_DOWN)
+    }
+
+    @Test
+    fun `getTrendArrow returns current source arrow even without bucketed data`() {
+        whenever(autosensDataStore.getBucketedDataTableCopy()).thenReturn(null)
+        whenever(autosensDataStore.getBgReadingsDataTableCopy()).thenReturn(listOf(rawReading(System.currentTimeMillis(), TrendArrow.FLAT)))
+        assertThat(trendCalculator.getTrendArrow(autosensDataStore)).isEqualTo(TrendArrow.FLAT)
+    }
+
+    private fun rawReading(timestamp: Long, trendArrow: TrendArrow) = GV(
+        timestamp = timestamp,
+        raw = null,
+        value = 100.0,
+        trendArrow = trendArrow,
+        noise = null,
+        sourceSensor = SourceSensor.UNKNOWN
+    )
 
     private fun createGlucoseValue(
         value: Double,

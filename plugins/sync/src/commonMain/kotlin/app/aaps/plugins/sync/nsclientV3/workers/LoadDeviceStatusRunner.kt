@@ -5,14 +5,17 @@ import app.aaps.core.interfaces.configuration.Config
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.nsclient.NSClientRepository
 import app.aaps.core.interfaces.utils.DateUtil
+import app.aaps.core.keys.interfaces.Preferences
 import app.aaps.core.nssdk.interfaces.NSAndroidClient
 
 import app.aaps.core.objects.workflow.WorkOutcome
 
 import app.aaps.plugins.sync.nsclientV3.NSClientV3Plugin
 import app.aaps.plugins.sync.nsclientV3.data.NSDeviceStatusHandler
+import app.aaps.plugins.sync.nsclientV3.keys.NsclientLongKey
 import dev.zacsweers.metro.Inject
 import kotlin.math.max
+import kotlin.math.min
 
 @Inject
 class LoadDeviceStatusRunner(
@@ -23,7 +26,8 @@ class LoadDeviceStatusRunner(
     private val dateUtil: DateUtil,
     private val nsDeviceStatusHandler: NSDeviceStatusHandler,
     private val nsClientRepository: NSClientRepository,
-    private val config: Config
+    private val config: Config,
+    private val preferences: Preferences
 ) {
 
     suspend fun run(): WorkOutcome {
@@ -67,7 +71,11 @@ class LoadDeviceStatusRunner(
      * while this phone was offline. A day holds about 300, so they come in pages.
      */
     private suspend fun loadAllSinceLastLoad(nsAndroidClient: NSAndroidClient) {
-        var from = max(nsClientV3Plugin.lastLoadedDeviceStatusSrvModified, dateUtil.now() - T.hours(48).msecs())
+        // b-hubit fork: the position is kept across restarts, so a start no longer reloads
+        // 48 hours. Still at least the last 15 minutes: after a start the pump, uploader and loop status on
+        // screen are empty until a device status arrives, and the master may not send one for 5 minutes.
+        val now = dateUtil.now()
+        var from = max(now - T.hours(48).msecs(), min(nsClientV3Plugin.lastLoadedDeviceStatusSrvModified, now - T.mins(15).msecs()))
         while (true) {
             val deviceStatuses = nsAndroidClient.getDeviceStatusModifiedSince(from, NSClientV3Plugin.RECORDS_TO_LOAD)
             if (deviceStatuses.isEmpty()) {
@@ -82,7 +90,10 @@ class LoadDeviceStatusRunner(
             val newest = deviceStatuses.mapNotNull { it.srvModified }.maxOrNull() ?: return
             if (newest <= from) return
             from = newest
-            nsClientV3Plugin.lastLoadedDeviceStatusSrvModified = newest
+            if (newest > nsClientV3Plugin.lastLoadedDeviceStatusSrvModified) {
+                nsClientV3Plugin.lastLoadedDeviceStatusSrvModified = newest
+                preferences.put(NsclientLongKey.DeviceStatusLastLoadedSrvModified, newest)
+            }
             if (deviceStatuses.size < NSClientV3Plugin.RECORDS_TO_LOAD) return
         }
     }

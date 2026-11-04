@@ -96,7 +96,7 @@ object MidnightUtils {
      * @return seconds
      */
     fun secondsFromMidnight(): Int =
-        secondsFrom(Clock.System.now().toEpochMilliseconds(), TimeZone.currentSystemDefault())
+        secondsFrom(Clock.System.now().toEpochMilliseconds(), SystemTimeZone.current())
 
     /**
      * Passed seconds from midnight for specified time ignoring DST change
@@ -106,7 +106,7 @@ object MidnightUtils {
      * @return seconds
      */
     fun secondsFromMidnight(timestamp: Long): Int =
-        secondsFrom(timestamp, TimeZone.currentSystemDefault())
+        secondsFrom(timestamp, SystemTimeZone.current())
 
     /**
      * Passed milliseconds from midnight for specified time ignoring DST change
@@ -116,5 +116,5 @@ object MidnightUtils {
      * @return milliseconds
      */
     fun milliSecFromMidnight(timestamp: Long): Long =
-        millisFrom(timestamp, TimeZone.currentSystemDefault())
+        millisFrom(timestamp, SystemTimeZone.current())
 }

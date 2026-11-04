@@ -1,6 +1,7 @@
 package app.aaps.implementation.utils
 
 import app.aaps.core.data.iob.InMemoryGlucoseValue
+import app.aaps.core.data.model.GV
 import app.aaps.core.data.model.TrendArrow
 import app.aaps.core.interfaces.aps.AutosensDataStore
 import app.aaps.core.interfaces.resources.TextResolver
@@ -10,6 +11,7 @@ import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesBinding
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
+import kotlin.time.Clock
 
 @ContributesBinding(AppScope::class)
 @SingleIn(AppScope::class)
@@ -19,17 +21,22 @@ class TrendCalculatorImpl(
 ) : TrendCalculator {
 
     override fun getTrendArrow(autosensDataStore: AutosensDataStore): TrendArrow? {
-        val data = autosensDataStore.getBucketedDataTableCopy() ?: return null
-        if (data.isEmpty()) return null
-        /* Change 4.0.0 - always calculate from bucketed data
-        val glucoseValue = data[0]
-        val trend = when {
-            glucoseValue.value != glucoseValue.recalculated -> calculateDirection(data) // always recalculate after smoothing
-            glucoseValue.trendArrow != TrendArrow.NONE      -> glucoseValue.trendArrow
-            else                                            -> calculateDirection(data)
-        }
-         */
+        val data = autosensDataStore.getBucketedDataTableCopy()
+        val readings = autosensDataStore.getBgReadingsDataTableCopy()
+        // Custom build: show the arrow supplied by the CGM source (e.g. Dexcom, via xDrip) when it is current.
+        // Smoothing plugins clear trendArrow on the bucketed data, so read it from the raw reading. The bucketed
+        // data is null until there are 3 readings, the source arrow must not depend on it.
+        if (data.isNullOrEmpty()) return sourceArrow(readings, Clock.System.now().toEpochMilliseconds())
+        sourceArrow(readings, data[0].timestamp)?.let { return it }
         return calculateDirection(data)
+    }
+
+    /** Arrow of the newest raw reading, if the source provided one and it is within [SOURCE_ARROW_MAX_AGE_MS] of [referenceTime]. */
+    private fun sourceArrow(readings: List<GV>, referenceTime: Long): TrendArrow? {
+        val latest = readings.firstOrNull() ?: return null
+        if (latest.trendArrow == TrendArrow.NONE) return null
+        if (kotlin.math.abs(latest.timestamp - referenceTime) > SOURCE_ARROW_MAX_AGE_MS) return null
+        return latest.trendArrow
     }
 
     override fun getTrendDescription(autosensDataStore: AutosensDataStore): String =
@@ -59,5 +66,9 @@ class TrendCalculatorImpl(
             slopeByMinute <= 40   -> TrendArrow.DOUBLE_UP
             else                  -> TrendArrow.NONE
         }
+    }
+
+    private companion object {
+        const val SOURCE_ARROW_MAX_AGE_MS = 10 * 60 * 1000L
     }
 }

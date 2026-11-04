@@ -73,7 +73,7 @@ internal class LoadDeviceStatusWorkerTest : TestBaseWithProfile() {
         TestListenableWorkerBuilder<LoadDeviceStatusWorker>(context)
             .setWorkerFactory(object : WorkerFactory() {
                 override fun createWorker(appContext: Context, workerClassName: String, workerParameters: WorkerParameters) =
-                    LoadDeviceStatusWorker(appContext, workerParameters, aapsLogger, fabricPrivacy, LoadDeviceStatusRunner(aapsLogger, nsClientV3Plugin, dateUtil, nsDeviceStatusHandler, nsClientRepository, config))
+                    LoadDeviceStatusWorker(appContext, workerParameters, aapsLogger, fabricPrivacy, LoadDeviceStatusRunner(aapsLogger, nsClientV3Plugin, dateUtil, nsDeviceStatusHandler, nsClientRepository, config, preferences))
             })
             .build()
 

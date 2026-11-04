@@ -1,5 +1,6 @@
 package app.aaps.ui.compose.stats
 
+import kotlinx.coroutines.awaitCancellation
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -72,6 +73,13 @@ fun StatsScreen(
     LaunchedEffect(lifecycleOwner) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
             viewModel.onStart()
+            // b-hubit fork: tell the view model when the screen goes away, so it stops
+            // recalculating for a screen nobody looks at.
+            try {
+                awaitCancellation()
+            } finally {
+                viewModel.onStop()
+            }
         }
     }
 
