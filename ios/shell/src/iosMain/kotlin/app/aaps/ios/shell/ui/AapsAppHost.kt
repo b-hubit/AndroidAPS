@@ -1,5 +1,7 @@
 package app.aaps.ios.shell.ui
 
+import kotlinx.coroutines.joinAll
+import app.aaps.core.interfaces.rx.events.EventAppInitialized
 import kotlin.time.TimeSource
 import androidx.compose.foundation.Image
 import androidx.compose.material3.Icon
@@ -172,7 +174,18 @@ private fun startApp(nsSocketFactory: NsSocketFactory): StartedApp {
 
     // Before the composition, not beside it: the first view model built reads the active pump, and
     // an empty plugin list there throws from a coroutine and takes the process with it.
-    IosAppStartup(logger, PluginStoreRegistry(graph.pluginStore, graph.configBuilder), graph.contributedPlugins) { graph.periodicMaintenance.start(graph.appScope) }.run()
+    val pluginJobs = IosAppStartup(logger, PluginStoreRegistry(graph.pluginStore, graph.configBuilder), graph.contributedPlugins) { graph.periodicMaintenance.start(graph.appScope) }.run()
+
+    // Performance test (ios-perf-test): announce the app as initialized once the plugins have started, as
+    // Android's MainApp does at the end of its start. Nothing sent this on iOS, and it is what starts the
+    // first IOB/COB calculation (IobCobCalculatorPlugin) - so after a start the graph waited for the next
+    // glucose reading, up to five minutes, before it showed IOB and COB. After the plugin jobs, because
+    // the calculator subscribes to the event in its own start and a send before that would be missed.
+    graph.appScope.launch {
+        pluginJobs.joinAll()
+        logger.info(LTag.CORE, "PERF plugins started: ${startMark.elapsedNow().inWholeMilliseconds} ms after start, sending EventAppInitialized")
+        graph.rxBus.send(EventAppInitialized())
+    }
 
     // Attach to the notification centre. Registering a category only records it now, so that building
     // the graph does not need an app bundle - see `IosNotificationDelegate.install`. It is done here
