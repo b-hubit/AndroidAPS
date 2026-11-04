@@ -219,7 +219,7 @@ jobs:
           AAPS_SCHEME: ${{ matrix.scheme }}
           # ios-perf-test branch only: label the build as a performance test.
           AAPS_DISPLAY_NAME: AAPS Perf
-          AAPS_TESTFLIGHT_NOTES: "PERFORMANCE TEST (branch ios-perf-test), not the everyday build. Asynchronous logging, sync positions kept across restarts, statistics calculated only when shown, timing lines (PERF) in aaps.log. To go back: TestFlight > AAPSClient > Previous Builds."
+          AAPS_TESTFLIGHT_NOTES: "PERFORMANCE TEST 2 (branch ios-perf-test), not the everyday build. System time zone cached (was re-read from disk on every basal lookup), asynchronous logging, sync positions kept across restarts, statistics calculated only when shown, timing lines (PERF) in aaps.log. To go back: TestFlight > AAPSClient > Previous Builds."
         run: fastlane testflight_client
 
       - name: Save Gradle and Kotlin/Native caches
