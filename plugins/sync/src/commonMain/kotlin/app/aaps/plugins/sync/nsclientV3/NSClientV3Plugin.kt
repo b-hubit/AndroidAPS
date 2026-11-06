@@ -724,6 +724,20 @@ class NSClientV3Plugin(
             executeLoop("START $reason")
     }
 
+    override fun reconnectAfterResume(reason: String) {
+        if (!isEnabled()) return
+        if (preferences.get(NsclientBooleanKey.NsPaused)) return
+        aapsLogger.debug(LTag.CORE, "Back from the background ($reason), reconnecting to Nightscout")
+        if (preferences.get(BooleanKey.NsClient3UseWs) && nsConnection.supportsWebsocket) {
+            // stop() then start(): start() alone is idempotent and would keep the dead socket. The
+            // new socket's subscribe clears initialLoadFinished and runs the catch-up round.
+            nsConnection.stop()
+            nsConnection.start("resume")
+        } else {
+            executeLoop("RESUME")
+        }
+    }
+
     override fun pause(newState: Boolean) {
         // Cancel any in-flight WorkManager job so a stuck worker can't keep
         // workIsRunning() == true after unpause and silently block all uploads

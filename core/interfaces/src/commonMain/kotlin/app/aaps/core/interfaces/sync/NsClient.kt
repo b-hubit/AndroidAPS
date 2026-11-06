@@ -47,6 +47,17 @@ interface NsClient : Sync {
         get() = MutableStateFlow(0L).asStateFlow()
 
     /**
+     * The app is back on the screen after iOS had it suspended: drop the websocket and open a fresh
+     * one, which starts a catch-up round as soon as it is subscribed.
+     *
+     * b-hubit fork (missed-readings test): a socket that was frozen with the app is dead, but nothing
+     * notices until the transport's own ping times out, a minute or two later - and the catch-up waits
+     * for that reconnect. So after a resume the glucose shown was as old as the suspension. No-op by
+     * default; only a client that holds its own socket needs it.
+     */
+    fun reconnectAfterResume(reason: String) {}
+
+    /**
      * Derived "master is reachable for remote control / config edits" signal. On a client it requires
      * ALL of: [wsConnectedFlow] (with a short falling-edge grace so brief WS flaps don't lock the UI),
      * a fresh UNIFIED liveness signal, a current Client-Control pairing, and not being orphaned (master

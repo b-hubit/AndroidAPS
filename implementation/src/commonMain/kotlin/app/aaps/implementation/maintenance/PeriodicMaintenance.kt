@@ -125,9 +125,26 @@ class PeriodicMaintenance(
      * a source that is not Nightscout, the check runs after the wait and judges what is there.
      */
     private suspend fun awaitCaughtUp(since: Long) {
-        val caughtUp = withTimeoutOrNull(CATCH_UP_WAIT) { nsClient.lastCatchUpAt.first { it >= since } }
-        if (caughtUp == null) aapsLogger.debug(LTag.CORE, "No Nightscout catch-up within $CATCH_UP_WAIT, checking missed readings anyway")
-        else aapsLogger.debug(LTag.CORE, "Nightscout caught up, checking missed readings")
+        var from = since
+        while (true) {
+            val startedAt = dateUtil.now()
+            val caughtUp = withTimeoutOrNull(CATCH_UP_WAIT) { nsClient.lastCatchUpAt.first { it >= from } }
+            if (caughtUp != null) {
+                aapsLogger.debug(LTag.CORE, "Nightscout caught up, checking missed readings")
+                return
+            }
+            // The timeout can run out while iOS has the app frozen, and then it fires the moment the
+            // app is back - before anything could be fetched. A wait that took far longer than it was
+            // given was such a freeze, so it starts over from now instead of judging stale data.
+            val now = dateUtil.now()
+            if (now - startedAt > (CATCH_UP_WAIT + RESUME_SLACK).inWholeMilliseconds) {
+                aapsLogger.debug(LTag.CORE, "Catch-up wait was frozen, waiting again")
+                from = now - RACE_MARGIN.inWholeMilliseconds
+                continue
+            }
+            aapsLogger.debug(LTag.CORE, "No Nightscout catch-up within $CATCH_UP_WAIT, checking missed readings anyway")
+            return
+        }
     }
 
     /**

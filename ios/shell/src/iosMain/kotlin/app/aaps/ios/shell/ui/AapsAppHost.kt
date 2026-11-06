@@ -90,6 +90,7 @@ import kotlinx.coroutines.launch
 import platform.Foundation.NSNotificationCenter
 import platform.Foundation.NSOperationQueue
 import platform.UIKit.UIApplicationDidBecomeActiveNotification
+import platform.UIKit.UIApplicationWillResignActiveNotification
 import platform.UIKit.UIApplicationDidEnterBackgroundNotification
 import platform.UIKit.UIViewController
 
@@ -161,6 +162,9 @@ private class StartedApp(
  * message, which the failure screen can act on, instead of failing somewhere inside the first screen.
  * And so that the screen can call this again.
  */
+/** Away for longer than this and the Nightscout socket is replaced on return - see [startApp]. */
+private const val RECONNECT_AFTER_MS = 60_000L
+
 private fun startApp(nsSocketFactory: NsSocketFactory): StartedApp {
     val store = IosStorage.open()
     // Built once, outside the composition: a graph rebuilt on each recomposition would hand out new
@@ -227,6 +231,32 @@ private fun startApp(nsSocketFactory: NsSocketFactory): StartedApp {
         `object` = null,
         queue = NSOperationQueue.mainQueue,
         usingBlock = { store.flush() }
+    )
+
+    // b-hubit fork (missed-readings test): a fresh Nightscout socket when the app is back after a
+    // suspension. The old one froze with the app and nothing replaced it until its ping timed out, so
+    // the glucose on screen stayed as old as the suspension for a minute or two after opening.
+    // Counted from the start too, not only from the last background: iOS may launch the app in the
+    // background and freeze it before it is ever shown. A quick switch away and back is left alone.
+    // `willResignActive`, which comes before every background and also before a banner or the control
+    // centre, so "away" is measured from the moment the app stopped being in front.
+    var lastSeenAt = graph.dateUtil.now()
+    NSNotificationCenter.defaultCenter.addObserverForName(
+        name = UIApplicationWillResignActiveNotification,
+        `object` = null,
+        queue = NSOperationQueue.mainQueue,
+        usingBlock = { lastSeenAt = graph.dateUtil.now() }
+    )
+    NSNotificationCenter.defaultCenter.addObserverForName(
+        name = UIApplicationDidBecomeActiveNotification,
+        `object` = null,
+        queue = NSOperationQueue.mainQueue,
+        usingBlock = {
+            val now = graph.dateUtil.now()
+            val away = now - lastSeenAt
+            lastSeenAt = now
+            if (away > RECONNECT_AFTER_MS) graph.nsClient.reconnectAfterResume("away ${away / 1000}s")
+        }
     )
     return StartedApp(graph, viewModelFactory, appName, appIcon)
 }
