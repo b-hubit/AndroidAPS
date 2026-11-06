@@ -1,5 +1,10 @@
 package app.aaps.implementation.maintenance
 
+import kotlin.coroutines.cancellation.CancellationException
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.flow.first
+import app.aaps.core.interfaces.sync.NsClient
+import app.aaps.core.data.model.GV
 import app.aaps.core.data.time.T
 import app.aaps.core.interfaces.alerts.LocalAlertUtils
 import app.aaps.core.interfaces.db.PersistenceLayer
@@ -55,7 +60,8 @@ class PeriodicMaintenance(
     private val persistenceLayer: PersistenceLayer,
     private val maintenance: Maintenance,
     private val preferences: Preferences,
-    private val dateUtil: DateUtil
+    private val dateUtil: DateUtil,
+    private val nsClient: NsClient
 ) {
 
     /**
@@ -78,15 +84,50 @@ class PeriodicMaintenance(
      */
     fun start(scope: CoroutineScope) {
         scope.launch {
+            var lastPassAt = 0L
             while (isActive) {
                 try {
+                    // b-hubit fork (missed-readings test): after a start, or when iOS kept the app
+                    // frozen past the interval, the local database is as old as the freeze. Judging it
+                    // straight away raised "missed BG readings" for readings that were in Nightscout
+                    // all along and arrived a few seconds later. Wait for the data first.
+                    val now = dateUtil.now()
+                    if (lastPassAt == 0L || now - lastPassAt > (INTERVAL + RESUME_SLACK).inWholeMilliseconds)
+                        awaitCaughtUp(since = now - RACE_MARGIN.inWholeMilliseconds)
                     runOnce()
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     aapsLogger.error(LTag.CORE, "Periodic maintenance pass failed", e)
                 }
+                lastPassAt = dateUtil.now()
                 delay(INTERVAL)
             }
         }
+        // Take the missed-readings alarm down the moment a fresh reading is stored, instead of at the
+        // next pass up to five minutes later - by then the user has already had to silence it.
+        scope.launch {
+            persistenceLayer.observeChanges(GV::class).collect {
+                try {
+                    localAlertUtils.dismissStaleBGAlertIfFresh()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    aapsLogger.error(LTag.CORE, "Missed-readings dismiss failed", e)
+                }
+            }
+        }
+    }
+
+    /**
+     * Waits until a Nightscout load round has brought the local data up to date after [since], or
+     * [CATCH_UP_WAIT] has passed. The bound is what keeps a real outage alarming: with no network, or
+     * a source that is not Nightscout, the check runs after the wait and judges what is there.
+     */
+    private suspend fun awaitCaughtUp(since: Long) {
+        val caughtUp = withTimeoutOrNull(CATCH_UP_WAIT) { nsClient.lastCatchUpAt.first { it >= since } }
+        if (caughtUp == null) aapsLogger.debug(LTag.CORE, "No Nightscout catch-up within $CATCH_UP_WAIT, checking missed readings anyway")
+        else aapsLogger.debug(LTag.CORE, "Nightscout caught up, checking missed readings")
     }
 
     /**
@@ -143,5 +184,14 @@ class PeriodicMaintenance(
         /** One day per daily pass, plus room for a pass that runs late. */
         val MAX_CUTOFF_STEP = 2.days
         const val KEEP_LOG_FILES = 30
+
+        /** A pass later than [INTERVAL] by more than this means the app was not running in between. */
+        val RESUME_SLACK = 2.minutes
+
+        /** Longest wait for fresh data after a start or a resume before checking anyway. */
+        val CATCH_UP_WAIT = 3.minutes
+
+        /** A catch-up that finished just before the pass woke up still counts. */
+        val RACE_MARGIN = 1.minutes
     }
 }

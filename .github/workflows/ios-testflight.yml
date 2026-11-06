@@ -216,6 +216,9 @@ jobs:
           GH_PAT: ${{ secrets.GH_PAT }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           AAPS_SCHEME: ${{ matrix.scheme }}
+          # ios-bg-alarm-test branch only: label the build as a test.
+          AAPS_DISPLAY_NAME: AAPS Test
+          AAPS_TESTFLIGHT_NOTES: "TEST: missed BG readings alarm (branch ios-bg-alarm-test), not the everyday build. After a start or a return from the background the alarm waits until data from Nightscout is in (at most 3 minutes), and it goes away by itself as soon as a fresh reading arrives. Dexcom trend arrow and speed fixes included. To go back: TestFlight > AAPSClient > Previous Builds."
         run: fastlane testflight_client
 
       - name: Save Gradle and Kotlin/Native caches

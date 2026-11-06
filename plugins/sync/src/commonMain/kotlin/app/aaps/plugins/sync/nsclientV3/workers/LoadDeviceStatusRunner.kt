@@ -36,6 +36,9 @@ class LoadDeviceStatusRunner(
         try {
             // Notify plugin we loaded al missed data
             nsClientV3Plugin.initialLoadFinished = true
+            // The chain reaches this step only after the glucose and treatment steps succeeded
+            // (NsLoadChain), so the local database is now current - see NsClient.lastCatchUpAt.
+            nsClientV3Plugin.markCaughtUp(dateUtil.now())
 
             if (config.AAPSCLIENT) loadAllSinceLastLoad(nsAndroidClient)
             else loadNewest(nsAndroidClient)

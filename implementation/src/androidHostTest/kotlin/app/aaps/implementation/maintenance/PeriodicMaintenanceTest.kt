@@ -39,7 +39,7 @@ class PeriodicMaintenanceTest : TestBase() {
 
     @BeforeEach
     fun init() {
-        sut = PeriodicMaintenance(aapsLogger, localAlertUtils, persistenceLayer, maintenance, preferences, dateUtil)
+        sut = PeriodicMaintenance(aapsLogger, localAlertUtils, persistenceLayer, maintenance, preferences, dateUtil, org.mockito.kotlin.mock())
     }
 
     /** The one a user notices: a follower whose CGM stops has to be told. */

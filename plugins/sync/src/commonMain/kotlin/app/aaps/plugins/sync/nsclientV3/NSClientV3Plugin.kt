@@ -554,6 +554,14 @@ class NSClientV3Plugin(
     // bumps this from the newest devicestatus's own created_at — but ONLY for a LIVE WS push (live=true),
     // never the catch-up/initial worker load, so a stale historical devicestatus pulled at boot can't mark
     // a long-offline master alive. So the client waits for the master's first real-time devicestatus.
+    private val _lastCatchUpAt = MutableStateFlow(0L)
+    override val lastCatchUpAt: StateFlow<Long> = _lastCatchUpAt.asStateFlow()
+
+    /** A load round has fetched glucose values and treatments, see [NsClient.lastCatchUpAt]. */
+    fun markCaughtUp(now: Long) {
+        _lastCatchUpAt.update { maxOf(it, now) }
+    }
+
     private val _lastDevicestatusReceivedAt = MutableStateFlow(0L)
     override val lastDevicestatusReceivedAt: StateFlow<Long> = _lastDevicestatusReceivedAt.asStateFlow()
 

@@ -36,6 +36,17 @@ interface NsClient : Sync {
         get() = MutableStateFlow(0L).asStateFlow()
 
     /**
+     * Wall-clock (ms epoch) when a load round last brought glucose values and treatments up to date
+     * with Nightscout, or `0L` if none has yet in this process.
+     *
+     * b-hubit fork (missed-readings test): the missed-readings alarm judges the newest glucose value
+     * in the local database. Right after a start, or after iOS has kept the app frozen, that value is
+     * old only because nothing has been fetched yet. This says when the local data can be trusted.
+     */
+    val lastCatchUpAt: StateFlow<Long>
+        get() = MutableStateFlow(0L).asStateFlow()
+
+    /**
      * Derived "master is reachable for remote control / config edits" signal. On a client it requires
      * ALL of: [wsConnectedFlow] (with a short falling-edge grace so brief WS flaps don't lock the UI),
      * a fresh UNIFIED liveness signal, a current Client-Control pairing, and not being orphaned (master

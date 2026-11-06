@@ -32,4 +32,10 @@ interface LocalAlertUtils {
      * Overview notification with sound, Therapy event
      */
     suspend fun checkStaleBGAlert()
+
+    /**
+     * Takes the missed-readings alarm down as soon as the newest glucose value is within the threshold
+     * again, instead of at the next periodic check up to five minutes later. Never raises it.
+     */
+    suspend fun dismissStaleBGAlertIfFresh() {}
 }

@@ -131,6 +131,14 @@ class LocalAlertUtilsImpl(
         }
     }
 
+    override suspend fun dismissStaleBGAlertIfFresh() {
+        val bgReading = persistenceLayer.getLastGlucoseValue() ?: return
+        // The same test that raises the alarm, turned round: a value inside the threshold means no
+        // reading is missing. Not the 5 minute rule below, which a value 6 minutes old would fail.
+        if (bgReading.timestamp + missedReadingsThreshold() >= dateUtil.now())
+            notificationManager.dismiss(NotificationId.BG_READINGS_MISSED)
+    }
+
     override suspend fun checkStaleBGAlert() {
         val bgReading = persistenceLayer.getLastGlucoseValue() ?: return
         if (preferences.get(BooleanKey.AlertMissedBgReading)
