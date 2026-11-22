@@ -51,6 +51,15 @@
 	  told the user it was a development build, and `isDev()` would have been true in front of real
 	  users.
 	-->
+	<!--
+	  b-hubit fork (ios-live-activity): the glucose Live Activity (Lock Screen, Dynamic Island, Apple
+	  Watch Smart Stack). Frequent updates raises the push budget iOS allows, needed for a reading
+	  every 5 minutes around the clock.
+	-->
+	<key>NSSupportsLiveActivities</key>
+	<true/>
+	<key>NSSupportsLiveActivitiesFrequentUpdates</key>
+	<true/>
 	<key>AAPSBuildType</key>
 	<string>$(CONFIGURATION)</string>
 </dict>

@@ -10,9 +10,20 @@ import AapsShared
 @main
 struct ClientApp: App {
 
+    @Environment(\.scenePhase) private var scenePhase
+
+    init() {
+        LiveActivityController.shared.startObserving()
+    }
+
     var body: some SwiftUI.Scene {
         WindowGroup {
             ShellView()
+        }
+        // b-hubit fork (ios-live-activity): keep the glucose Live Activity running and its push
+        // addresses known to Home Assistant. See LiveActivityController.
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { LiveActivityController.shared.refresh() }
         }
     }
 }

@@ -17,7 +17,39 @@
 		AA3009900000000000000 /* NsSocketBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1009900000000000000 /* NsSocketBridge.swift */; };
 		D32B0F773048851500FAFE85 /* SocketIO in Frameworks */ = {isa = PBXBuildFile; productRef = AA00SP02000000000000001 /* SocketIO */; };
 		D32B0F783048851500FAFE85 /* SocketIO in Frameworks */ = {isa = PBXBuildFile; productRef = AA00SP02000000000000002 /* SocketIO */; };
+		AA4100100000000000000 /* GlucoseActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA4000100000000000000 /* GlucoseActivityAttributes.swift */; };
+		AA4100200000000000000 /* LiveActivityController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA4000200000000000000 /* LiveActivityController.swift */; };
+		AA4100300000000000000 /* GlucoseActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA4000100000000000000 /* GlucoseActivityAttributes.swift */; };
+		AA4100400000000000000 /* LiveActivityController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA4000200000000000000 /* LiveActivityController.swift */; };
+		AA4100500000000000000 /* GlucoseActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA4000100000000000000 /* GlucoseActivityAttributes.swift */; };
+		AA4100600000000000000 /* GlucoseLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA4000300000000000000 /* GlucoseLiveActivity.swift */; };
+		AA4100700000000000000 /* AAPSLiveActivity.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = AA4000500000000000000 /* AAPSLiveActivity.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		AA4100800000000000000 /* Settings.bundle in Resources */ = {isa = PBXBuildFile; fileRef = AA4000600000000000000 /* Settings.bundle */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		AA4300500000000000000 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AA1001000000000000000 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = AA4300100000000000000;
+			remoteInfo = AAPSLiveActivity;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		AA4200400000000000000 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				AA4100700000000000000 /* AAPSLiveActivity.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		AA1000100000000000000 /* ClientApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ClientApp.swift; path = Shared/ClientApp.swift; sourceTree = "<group>"; };
@@ -28,6 +60,13 @@
 		AA2000200000000000000 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Assets.xcassets; path = AAPSClient/Assets.xcassets; sourceTree = "<group>"; };
 		AA3000100000000000000 /* AAPSClient2.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AAPSClient2.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA3000200000000000000 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Assets.xcassets; path = AAPSClient2/Assets.xcassets; sourceTree = "<group>"; };
+		AA4000100000000000000 /* GlucoseActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GlucoseActivityAttributes.swift; path = Shared/GlucoseActivityAttributes.swift; sourceTree = "<group>"; };
+		AA4000200000000000000 /* LiveActivityController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LiveActivityController.swift; path = Shared/LiveActivityController.swift; sourceTree = "<group>"; };
+		AA4000300000000000000 /* GlucoseLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GlucoseLiveActivity.swift; path = LiveActivity/GlucoseLiveActivity.swift; sourceTree = "<group>"; };
+		AA4000400000000000000 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = Info.plist; path = LiveActivity/Info.plist; sourceTree = "<group>"; };
+		AA4000500000000000000 /* AAPSLiveActivity.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = AAPSLiveActivity.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA4000600000000000000 /* Settings.bundle */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.plug-in"; path = Settings.bundle; sourceTree = "<group>"; };
+		AA4000700000000000000 /* AAPSClient.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = AAPSClient.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -49,6 +88,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		AA4200200000000000000 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -58,6 +104,11 @@
 				AA1000100000000000000 /* ClientApp.swift */,
 				AA1009900000000000000 /* NsSocketBridge.swift */,
 				AA2001200000000000000 /* AAPSClient */,
+				AA4000100000000000000 /* GlucoseActivityAttributes.swift */,
+				AA4000200000000000000 /* LiveActivityController.swift */,
+				AA4001200000000000000 /* LiveActivity */,
+				AA4000600000000000000 /* Settings.bundle */,
+				AA4000700000000000000 /* AAPSClient.entitlements */,
 				AA3001200000000000000 /* AAPSClient2 */,
 				AA1000300000000000000 /* Signing.xcconfig */,
 				AA1000200000000000000 /* AapsShared.framework */,
@@ -70,6 +121,7 @@
 			children = (
 				AA2000100000000000000 /* AAPSClient.app */,
 				AA3000100000000000000 /* AAPSClient2.app */,
+				AA4000500000000000000 /* AAPSLiveActivity.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -90,6 +142,15 @@
 			name = AAPSClient2;
 			sourceTree = "<group>";
 		};
+		AA4001200000000000000 /* LiveActivity */ = {
+			isa = PBXGroup;
+			children = (
+				AA4000300000000000000 /* GlucoseLiveActivity.swift */,
+				AA4000400000000000000 /* Info.plist */,
+			);
+			name = LiveActivity;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -101,10 +162,12 @@
 				AA2000600000000000000 /* Sources */,
 				AA2000700000000000000 /* Frameworks */,
 				AA2000800000000000000 /* Resources */,
+				AA4200400000000000000 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				AA4300600000000000000 /* PBXTargetDependency */,
 			);
 			name = AAPSClient;
 			packageProductDependencies = (
@@ -135,6 +198,23 @@
 			productReference = AA3000100000000000000 /* AAPSClient2.app */;
 			productType = "com.apple.product-type.application";
 		};
+		AA4300100000000000000 /* AAPSLiveActivity */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AA4300200000000000000 /* Build configuration list for PBXNativeTarget "AAPSLiveActivity" */;
+			buildPhases = (
+				AA4200100000000000000 /* Sources */,
+				AA4200200000000000000 /* Frameworks */,
+				AA4200300000000000000 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = AAPSLiveActivity;
+			productName = AAPSLiveActivity;
+			productReference = AA4000500000000000000 /* AAPSLiveActivity.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -163,6 +243,7 @@
 			targets = (
 				AA2001300000000000000 /* AAPSClient */,
 				AA3001300000000000000 /* AAPSClient2 */,
+				AA4300100000000000000 /* AAPSLiveActivity */,
 			);
 		};
 /* End PBXProject section */
@@ -173,6 +254,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				AA2000400000000000000 /* Assets.xcassets in Resources */,
+				AA4100800000000000000 /* Settings.bundle in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -181,6 +263,13 @@
 			buildActionMask = 2147483647;
 			files = (
 				AA3000400000000000000 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AA4200300000000000000 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -224,6 +313,8 @@
 			files = (
 				AA2000300000000000000 /* ClientApp.swift in Sources */,
 				AA2009900000000000000 /* NsSocketBridge.swift in Sources */,
+				AA4100100000000000000 /* GlucoseActivityAttributes.swift in Sources */,
+				AA4100200000000000000 /* LiveActivityController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -233,10 +324,29 @@
 			files = (
 				AA3000300000000000000 /* ClientApp.swift in Sources */,
 				AA3009900000000000000 /* NsSocketBridge.swift in Sources */,
+				AA4100300000000000000 /* GlucoseActivityAttributes.swift in Sources */,
+				AA4100400000000000000 /* LiveActivityController.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AA4200100000000000000 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA4100500000000000000 /* GlucoseActivityAttributes.swift in Sources */,
+				AA4100600000000000000 /* GlucoseLiveActivity.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		AA4300600000000000000 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = AA4300100000000000000 /* AAPSLiveActivity */;
+			targetProxy = AA4300500000000000000 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		AA1001100000000000000 /* Debug */ = {
@@ -264,6 +374,7 @@
 			baseConfigurationReference = AA1000300000000000000 /* Signing.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = AAPSClient.entitlements;
 				"CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*]" = Simulator.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
@@ -369,6 +480,7 @@
 			baseConfigurationReference = AA1000300000000000000 /* Signing.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = AAPSClient.entitlements;
 				"CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*]" = Simulator.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
@@ -448,6 +560,62 @@
 			};
 			name = Release;
 		};
+		AA4300300000000000000 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = AA1000300000000000000 /* Signing.xcconfig */;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(AAPS_BUILD_NUMBER:default=1)";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = LiveActivity/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "AAPS Live";
+				// The Apple Watch Smart Stack layout (.supplementalActivityFamilies) needs iOS 18. On an
+				// older iPhone the app still runs, there is just no Live Activity.
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = "$(AAPS_MARKETING_VERSION:default=1.0)";
+				PRODUCT_BUNDLE_IDENTIFIER = "org.nightscout.$(DEVELOPMENT_TEAM).aapsclient.LiveActivity";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		AA4300400000000000000 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = AA1000300000000000000 /* Signing.xcconfig */;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(AAPS_BUILD_NUMBER:default=1)";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = LiveActivity/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "AAPS Live";
+				// The Apple Watch Smart Stack layout (.supplementalActivityFamilies) needs iOS 18. On an
+				// older iPhone the app still runs, there is just no Live Activity.
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = "$(AAPS_MARKETING_VERSION:default=1.0)";
+				PRODUCT_BUNDLE_IDENTIFIER = "org.nightscout.$(DEVELOPMENT_TEAM).aapsclient.LiveActivity";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -474,6 +642,15 @@
 			buildConfigurations = (
 				AA3001000000000000000 /* Debug */,
 				D32B0F7B304886E000FAFE85 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		AA4300200000000000000 /* Build configuration list for PBXNativeTarget "AAPSLiveActivity" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA4300300000000000000 /* Debug */,
+				AA4300400000000000000 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

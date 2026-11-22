@@ -18,6 +18,9 @@ SCHEME = ENV.fetch("AAPS_SCHEME", "AAPSClient")
 BUNDLE_SUFFIX = SCHEME == "AAPSClient2" ? "aapsclient2" : "aapsclient"
 BUNDLE_ID = "org.nightscout.#{TEAMID}.#{BUNDLE_SUFFIX}"
 PROJECT = File.expand_path("../AAPSClient.xcodeproj", __dir__)
+# b-hubit fork (ios-live-activity): the glucose Live Activity widget extension, embedded in AAPSClient.
+EXTENSION_TARGET = "AAPSLiveActivity"
+EXTENSION_ID = "#{BUNDLE_ID}.LiveActivity"
 OUTPUT = File.expand_path("../build", __dir__)
 
 platform :ios do
@@ -31,25 +34,50 @@ platform :ios do
       key_content: ENV.fetch("FASTLANE_KEY")
     )
 
+    require "xcodeproj"
+    live_activity = SCHEME == "AAPSClient" &&
+      Xcodeproj::Project.open(PROJECT).targets.any? { |t| t.name == EXTENSION_TARGET }
+
+    # b-hubit fork (ios-live-activity): the app needs Push Notifications so Home Assistant can update
+    # the Live Activity, and the extension needs an App ID of its own. Both are created through the
+    # App Store Connect API, the way the Trio build of this organisation does it.
+    if live_activity
+      configure_bundle_id = lambda do |name, identifier, capabilities|
+        bundle_id = Spaceship::ConnectAPI::BundleId.find(identifier) ||
+          Spaceship::ConnectAPI::BundleId.create(name: name, identifier: identifier, platform: "IOS")
+        existing = bundle_id.get_capabilities.map(&:capability_type)
+        capabilities.reject { |c| existing.include?(c) }.each do |c|
+          UI.message("Enabling #{c} for #{identifier}")
+          bundle_id.create_capability(c)
+        end
+      end
+      configure_bundle_id.call("AAPSClient", BUNDLE_ID,
+        [Spaceship::ConnectAPI::BundleIdCapability::Type::PUSH_NOTIFICATIONS])
+      configure_bundle_id.call("AAPSClient LiveActivity", EXTENSION_ID, [])
+    end
+
     # Not read-only: the first run has to create the App Store profile for this bundle id. The
-    # distribution certificate is reused from Match-Secrets, never a new one.
+    # distribution certificate is reused from Match-Secrets, never a new one. With the Live Activity
+    # the profiles are made anew every run (force), because a profile created before Push was enabled
+    # does not carry the aps-environment entitlement and the signing would fail on it.
     match(
       type: "appstore",
       readonly: false,
+      force: live_activity,
       api_key: api_key,
       team_id: TEAMID,
-      app_identifier: [BUNDLE_ID],
+      app_identifier: live_activity ? [BUNDLE_ID, EXTENSION_ID] : [BUNDLE_ID],
       git_basic_authorization: Base64.strict_encode64("#{OWNER}:#{ENV.fetch('GH_PAT')}")
     )
 
-    profile = Actions.lane_context[SharedValues::MATCH_PROVISIONING_PROFILE_MAPPING][BUNDLE_ID]
+    mapping = Actions.lane_context[SharedValues::MATCH_PROVISIONING_PROFILE_MAPPING]
+    profile = mapping[BUNDLE_ID]
 
     # Manual App Store signing for the Release build of this one target. Set through the xcodeproj
     # gem directly: fastlane's update_code_signing_settings refuses this project ("Seems to be a very
     # old project file format") because the modern format has no TargetAttributes section. Only the
     # CI checkout is changed. The sdk-conditional identity is overwritten too, otherwise the
     # project's "Apple Development" for device builds would still win.
-    require "xcodeproj"
     project = Xcodeproj::Project.open(PROJECT)
     target = project.targets.find { |t| t.name == SCHEME } or UI.user_error!("No target #{SCHEME}")
     release = target.build_configurations.find { |c| c.name == "Release" } or UI.user_error!("No Release")
@@ -76,6 +104,21 @@ platform :ios do
       next unless phase.shell_script.include?(release_line)
       phase.shell_script = phase.shell_script.sub(release_line, "Release) KOTLIN_BUILD=Debug ;;")
     end
+    export_profiles = { BUNDLE_ID => profile }
+    if live_activity
+      extension = project.targets.find { |t| t.name == EXTENSION_TARGET }
+      ext_profile = mapping[EXTENSION_ID]
+      ext_settings = extension.build_configurations.find { |c| c.name == "Release" }.build_settings
+      ext_settings["CODE_SIGN_STYLE"] = "Manual"
+      ext_settings["DEVELOPMENT_TEAM"] = TEAMID
+      ext_settings["CODE_SIGN_IDENTITY"] = "iPhone Distribution"
+      ext_settings["CODE_SIGN_IDENTITY[sdk=iphoneos*]"] = "iPhone Distribution"
+      ext_settings["PROVISIONING_PROFILE_SPECIFIER"] = ext_profile
+      ext_settings["PRODUCT_BUNDLE_IDENTIFIER"] = EXTENSION_ID
+      export_profiles[EXTENSION_ID] = ext_profile
+      UI.message("Signing #{EXTENSION_TARGET} (Release) with '#{ext_profile}' for #{EXTENSION_ID}")
+    end
+
     project.save
     UI.message("Signing #{SCHEME} (Release) with '#{profile}' for #{BUNDLE_ID}")
 
@@ -85,7 +128,7 @@ platform :ios do
       configuration: "Release",
       destination: "generic/platform=iOS",
       export_method: "app-store",
-      export_options: { provisioningProfiles: { BUNDLE_ID => profile } },
+      export_options: { provisioningProfiles: export_profiles },
       output_directory: OUTPUT,
       output_name: "#{SCHEME}.ipa",
       buildlog_path: File.join(OUTPUT, "logs")

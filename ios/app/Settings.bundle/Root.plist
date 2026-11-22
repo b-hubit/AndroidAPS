@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- b-hubit fork (ios-live-activity): iOS Settings > AAPS Live. Read by LiveActivityController. -->
+	<key>PreferenceSpecifiers</key>
+	<array>
+		<dict>
+			<key>Type</key>
+			<string>PSGroupSpecifier</string>
+			<key>Title</key>
+			<string>Glukoza na ekranie blokady</string>
+			<key>FooterText</key>
+			<string>Adres webhooka z Home Assistant, np. https://twoj-ha.ui.nabu.casa/api/webhook/aaps_live_xxxx. Home Assistant wysyła każdy nowy odczyt na ekran blokady i Apple Watch. Puste pole = wyłączone.</string>
+		</dict>
+		<dict>
+			<key>Type</key>
+			<string>PSToggleSwitchSpecifier</string>
+			<key>Title</key>
+			<string>Włączone</string>
+			<key>Key</key>
+			<string>live_activity_enabled</string>
+			<key>DefaultValue</key>
+			<true/>
+		</dict>
+		<dict>
+			<key>Type</key>
+			<string>PSTextFieldSpecifier</string>
+			<key>Title</key>
+			<string>Webhook</string>
+			<key>Key</key>
+			<string>live_activity_webhook</string>
+			<key>KeyboardType</key>
+			<string>URL</string>
+			<key>AutocapitalizationType</key>
+			<string>None</string>
+			<key>AutocorrectionType</key>
+			<string>No</string>
+			<key>DefaultValue</key>
+			<string></string>
+		</dict>
+	</array>
+</dict>
+</plist>
