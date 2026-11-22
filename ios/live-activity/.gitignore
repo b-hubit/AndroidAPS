@@ -1,0 +1,5 @@
+config.json
+state.json
+*.p8
+.lock
+__pycache__/

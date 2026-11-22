@@ -1,0 +1,38 @@
+# b-hubit fork (ios-live-activity): Home Assistant side of the glucose Live Activity.
+# Copy the shell_command block into configuration.yaml, the two automations into automations.yaml
+# (or create them in the UI from YAML), then restart Home Assistant.
+# Replace aaps_live_ZMIEN_MNIE with a long random id; the same id goes into the iPhone setting.
+
+shell_command:
+  aaps_live_register: >-
+    python3 /config/aaps_live/aaps_live_activity.py register
+    {{ kind }} {{ token }} {{ activity_id }}
+  aaps_live_tick: python3 /config/aaps_live/aaps_live_activity.py tick
+
+automation:
+  - alias: "AAPS Live: token z iPhone"
+    id: aaps_live_register
+    mode: queued
+    triggers:
+      - trigger: webhook
+        webhook_id: aaps_live_ZMIEN_MNIE
+        allowed_methods: [POST]
+        local_only: false
+    conditions:
+      - condition: template
+        value_template: "{{ trigger.json.kind in ['start', 'update'] and (trigger.json.token | regex_match('^[0-9a-f]+$')) }}"
+    actions:
+      - action: shell_command.aaps_live_register
+        data:
+          kind: "{{ trigger.json.kind }}"
+          token: "{{ trigger.json.token }}"
+          activity_id: "{{ trigger.json.activity_id | default('-') }}"
+
+  - alias: "AAPS Live: nowy odczyt"
+    id: aaps_live_tick
+    mode: single
+    triggers:
+      - trigger: time_pattern
+        seconds: "/30"
+    actions:
+      - action: shell_command.aaps_live_tick

@@ -1,0 +1,11 @@
+{
+  "team_id": "TWOJ_TEAM_ID",
+  "key_id": "ID_KLUCZA_APNS",
+  "key_file": "AuthKey_ID_KLUCZA_APNS.p8",
+  "bundle_id": "org.nightscout.TWOJ_TEAM_ID.aapsclient",
+  "nightscout_url": "https://twoj-nightscout.example.com",
+  "nightscout_token": "token-tylko-do-odczytu",
+  "units": "mg/dl",
+  "low_mgdl": 70,
+  "high_mgdl": 180
+}
