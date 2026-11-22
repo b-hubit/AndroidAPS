@@ -8,6 +8,9 @@ shell_command:
     python3 /config/aaps_live/aaps_live_activity.py register
     {{ kind }} {{ token }} {{ activity_id }}
   aaps_live_tick: python3 /config/aaps_live/aaps_live_activity.py tick
+  # Check only: Developer tools > Actions > shell_command.aaps_live_test shows the output.
+  # (The Terminal & SSH add-on has no python3; shell_command runs inside Home Assistant, which has.)
+  aaps_live_test: python3 /config/aaps_live/aaps_live_activity.py test
 
 automation:
   - alias: "AAPS Live: token z iPhone"

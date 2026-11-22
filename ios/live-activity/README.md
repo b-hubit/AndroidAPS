@@ -24,11 +24,12 @@ Dane idą tylko: Nightscout → Home Assistant → Apple → Twój iPhone.
      - `nightscout_url` i `nightscout_token` (token z rolą `readable` z Nightscout → Admin tools),
        albo `nightscout_api_secret` zamiast tokenu,
      - `units`: `mg/dl` albo `mmol`, `low_mgdl` / `high_mgdl` – granice kolorów.
-2. Sprawdź połączenie z Nightscout: Narzędzia deweloperskie → Akcje →
-   `shell_command.aaps_live_tick` po dodaniu konfiguracji, albo w terminalu HA:
-   `python3 /config/aaps_live/aaps_live_activity.py test` – powinien wypisać aktualną glukozę.
-3. Dodaj `shell_command` i dwie automatyzacje z `home_assistant.yaml`. W `webhook_id` wpisz
+2. Dodaj `shell_command` i dwie automatyzacje z `home_assistant.yaml`. W `webhook_id` wpisz
    długi losowy ciąg zamiast `aaps_live_ZMIEN_MNIE`. Uruchom ponownie Home Assistant.
+3. Sprawdź połączenie z Nightscout: Narzędzia deweloperskie → Akcje →
+   `shell_command.aaps_live_test` → Wykonaj akcję. W odpowiedzi (`stdout`) powinna być aktualna
+   glukoza. Dodatek Terminal & SSH nie ma Pythona, więc skryptu nie uruchomisz z terminala –
+   `shell_command` działa wewnątrz Home Assistant, który Pythona ma.
 
 ## 3. iPhone
 
