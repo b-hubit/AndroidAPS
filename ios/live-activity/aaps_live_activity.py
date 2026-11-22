@@ -12,6 +12,8 @@ and cryptography. Nothing leaves your own systems except the push itself, which 
         Live Activity when the current one is close to the 8 hour limit iOS sets.
     aaps_live_activity.py test
         Prints what it would push, without pushing. For checking the Nightscout part.
+    aaps_live_activity.py status
+        Prints whether the iPhone has reported its tokens and when the last push went out.
 
 Configuration: config.json next to this file (see config.example.json). State: state.json, written
 by this script.
@@ -258,12 +260,14 @@ def tick(cfg, state, force=False):
             return
 
     if not update_token:
+        log("no Live Activity token yet - open the app on the iPhone with the webhook set")
         return
     if not (new_reading or force):
         return
     status, text = send_push(cfg, state, update_token, update_payload(content))
     if status == 200:
         state["last_reading_time"] = content["readingTime"]
+        log(f"pushed {content['value']} {content['arrow']}")
     elif token_is_dead(status, text):
         state.pop("update_token", None)
 
@@ -303,6 +307,17 @@ def main(argv):
             register(cfg, state, argv[2], argv[3].strip().lower(), argv[4] if len(argv) > 4 else "")
         elif command == "tick":
             tick(cfg, state)
+        elif command == "status":
+            now = time.time()
+            print(json.dumps({
+                "update_token": bool(state.get("update_token")),
+                "start_token": bool(state.get("start_token")),
+                "activity_id": state.get("activity_id"),
+                "activity_age_min": round((now - state["started_at"]) / 60) if state.get("started_at") else None,
+                "last_pushed_reading_min_ago":
+                    round((now - state["last_reading_time"]) / 60) if state.get("last_reading_time") else None,
+            }, indent=2))
+            return 0
         elif command == "test":
             content = read_nightscout(cfg)
             print(json.dumps(update_payload(content) if content else None, indent=2, ensure_ascii=False))

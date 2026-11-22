@@ -11,6 +11,7 @@ shell_command:
   # Check only: Developer tools > Actions > shell_command.aaps_live_test shows the output.
   # (The Terminal & SSH add-on has no python3; shell_command runs inside Home Assistant, which has.)
   aaps_live_test: python3 /config/aaps_live/aaps_live_activity.py test
+  aaps_live_status: python3 /config/aaps_live/aaps_live_activity.py status
 
 automation:
   - alias: "AAPS Live: token z iPhone"
