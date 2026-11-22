@@ -59,10 +59,17 @@ class UserDefaultsMigration(
         }
     }
 
-    /** The values of the app's domain that the store can hold. */
+    /**
+     * The values of the app's domain that the store can hold.
+     *
+     * b-hubit fork (ios-live-activity): not the keys of the iOS Settings page (Settings.bundle). iOS
+     * keeps those in this same domain and the Settings app reads them from there; moving them into the
+     * store emptied the page on every start, and the Live Activity lost its Home Assistant address.
+     */
     internal fun values(): Map<String, Any> =
         defaults.persistentDomainForName(domain).orEmpty().entries.mapNotNull { (key, value) ->
             val name = key as? String ?: return@mapNotNull null
+            if (name.startsWith(SETTINGS_PAGE_PREFIX)) return@mapNotNull null
             storable(value)?.let { name to it }
         }.toMap()
 
@@ -73,6 +80,9 @@ class UserDefaultsMigration(
     }
 
     companion object {
+
+        /** Keys written by the iOS Settings page, which must stay in `NSUserDefaults`. */
+        internal const val SETTINGS_PAGE_PREFIX = "live_activity_"
 
         /**
          * A value of `NSUserDefaults` as the store holds it, or null when the store cannot hold it.
