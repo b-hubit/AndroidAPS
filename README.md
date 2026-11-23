@@ -33,6 +33,7 @@ Każdy build zawiera wszystko z wcześniejszych buildów tej samej linii zmian
 | `ios-perf-test` | Testy szybkości startu (zakończone, wmergowane do `ios-trend-arrow`). |
 | `ios-bg-alarm-test` | Testy alarmu „brak odczytów BG” (czeka na wydanie 4.0.1 z poprawką twórców). |
 | `ios-live-activity` | AAPS Live: wszystko powyżej + glukoza na ekranie blokady i Apple Watch. Konfiguracja Home Assistant w `ios/live-activity`. |
+| `komplikacja` | `ios-live-activity` + glukoza na tarczy Apple Watch przez komplikację Kalendarz (tylko Home Assistant, bez nowego buildu). Instrukcja: `ios/live-activity/CALENDAR.md`. |
 | `ios-builds` | Ta tabela. |
 
 ## Zgłoszenia w oficjalnym repo
