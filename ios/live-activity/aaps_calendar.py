@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-b-hubit fork (branch komplikacja): glucose on any Apple Watch face, through the Calendar complication.
+b-hubit fork (branch ios-live-activity): glucose on any Apple Watch face, through the Calendar complication.
 
 Third-party watch complications may refresh only about 4 times an hour. The system Calendar
 complication has no such limit, so this script keeps one event in an iCloud calendar up to date with

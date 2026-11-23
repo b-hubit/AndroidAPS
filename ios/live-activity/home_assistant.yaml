@@ -1,7 +1,7 @@
 # b-hubit fork (ios-live-activity): Home Assistant side of the glucose Live Activity.
 # Copy the shell_command block into configuration.yaml, the two automations into automations.yaml
 # (or create them in the UI from YAML), then restart Home Assistant.
-# Replace aaps_live_ZMIEN_MNIE with a long random id; the same id goes into the iPhone setting.
+# Replace aaps_live_CHANGE_ME with a long random id; the same id goes into the iPhone setting.
 
 shell_command:
   aaps_live_register: >-
@@ -12,17 +12,17 @@ shell_command:
   # (The Terminal & SSH add-on has no python3; shell_command runs inside Home Assistant, which has.)
   aaps_live_test: python3 /config/aaps_live/aaps_live_activity.py test
   aaps_live_status: python3 /config/aaps_live/aaps_live_activity.py status
-  # Branch komplikacja: glucose on the watch face through the Calendar complication.
+  # Glucose on the watch face through the Calendar complication (CALENDAR.md).
   aaps_calendar_tick: python3 /config/aaps_live/aaps_calendar.py tick
   aaps_calendar_test: python3 /config/aaps_live/aaps_calendar.py test
 
 automation:
-  - alias: "AAPS Live: token z iPhone"
+  - alias: "AAPS Live: token from iPhone"
     id: aaps_live_register
     mode: queued
     triggers:
       - trigger: webhook
-        webhook_id: aaps_live_ZMIEN_MNIE
+        webhook_id: aaps_live_CHANGE_ME
         allowed_methods: [POST]
         local_only: false
     conditions:
@@ -36,7 +36,7 @@ automation:
           activity_id: "{{ trigger.json.activity_id | default('-') }}"
           device: "{{ trigger.json.device | default('default') }}"
 
-  - alias: "AAPS Live: nowy odczyt"
+  - alias: "AAPS Live: new reading"
     id: aaps_live_tick
     mode: single
     triggers:

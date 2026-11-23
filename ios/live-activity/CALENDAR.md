@@ -1,43 +1,48 @@
-# Glukoza na tarczy Apple Watch – komplikacja Kalendarz (gałąź komplikacja)
+# Glucose on the Apple Watch face – Calendar complication (b-hubit, branch ios-live-activity)
 
-Komplikacje innych aplikacji Apple pozwala odświeżać ok. 4 razy na godzinę. Systemowa komplikacja
-**Kalendarz** nie ma tego limitu, więc Home Assistant przy każdym odczycie aktualizuje jedno
-wydarzenie w Twoim kalendarzu iCloud, np. „116 ↗ +3” o godzinie odczytu. Zegarek pokazuje je obok
-zegara albo w kółku, na każdej tarczy z komplikacją Kalendarz. AAPSClient nie jest do tego potrzebny.
+[🇵🇱 Wersja polska](CALENDAR.pl.md)
 
-Wydarzenie trwa 20 minut od odczytu. Gdy nowy odczyt nie przyjdzie, znika z tarczy, zamiast udawać
-aktualną wartość.
+Apple lets third-party watch complications refresh about 4 times an hour. The system **Calendar**
+complication has no such limit, so Home Assistant keeps one event in an iCloud calendar up to date
+with every reading, e.g. "116 ↗ +3" at the time of the reading. The watch shows it on any face with
+a Calendar complication. No AAPSClient build is needed for this.
 
-## 1. Osobny kalendarz
+The event lasts 20 minutes from the reading. If no new reading comes, it disappears from the face
+instead of showing an old value as current.
 
-Na iPhonie: Kalendarz → Kalendarze → Dodaj kalendarz → nazwa **Glukoza**, konto **iCloud**.
-W ustawieniach tego kalendarza wyłącz powiadomienia, jeśli się pojawiają.
-Na zegarku powinien być widoczny automatycznie (aplikacja Watch → Kalendarz → kalendarze).
+## 1. A separate calendar
 
-## 2. Hasło do aplikacji
+iPhone: Calendar → Calendars → Add Calendar → name **Glukoza** (or any, matching `calendar_name`),
+account **iCloud**. Turn off its alerts if any appear.
 
-account.apple.com → Logowanie i bezpieczeństwo → **Hasła do aplikacji** → utwórz, np. „Home Assistant”.
-To jest osobne hasło tylko do kalendarza – nie podawaj swojego hasła Apple ID.
+## 2. App-specific password
+
+account.apple.com → Sign-In and Security → **App-Specific Passwords** → create one, e.g.
+"Home Assistant". Never use the Apple ID password itself.
 
 ## 3. Home Assistant
 
-1. Wgraj `aaps_calendar.py` do `/config/aaps_live/` (obok `aaps_live_activity.py`, korzysta z niego).
-2. W `/config/aaps_live/config.json` dopisz:
+1. Put `aaps_calendar.py` in `/config/aaps_live/` (next to `aaps_live_activity.py`, which it uses).
+2. Add to `/config/aaps_live/config.json` (mind the commas):
    ```json
-   "icloud_user": "twoj@apple.id",
+   "icloud_user": "you@apple.id",
    "icloud_app_password": "xxxx-xxxx-xxxx-xxxx",
    "calendar_name": "Glukoza"
    ```
-3. W `configuration.yaml`, w `shell_command`, dopisz `aaps_calendar_tick` i `aaps_calendar_test`,
-   a w automatyzacji „AAPS Live: nowy odczyt” drugą akcję `shell_command.aaps_calendar_tick`
-   (wszystko w `home_assistant.yaml`). Uruchom ponownie Home Assistant.
-4. Narzędzia deweloperskie → Akcje → `shell_command.aaps_calendar_test` – w `stdout` powinien być
-   adres kalendarza Glukoza. Błąd 401 = złe hasło do aplikacji, „no calendar named” = inna nazwa.
+3. `configuration.yaml` → `shell_command`: add `aaps_calendar_tick` and `aaps_calendar_test`; in the
+   automation "AAPS Live: new reading" add a second action `shell_command.aaps_calendar_tick`
+   (all in `home_assistant.yaml`). Restart Home Assistant.
+4. Developer tools → Actions → `shell_command.aaps_calendar_test`: `stdout` shows the calendar
+   address. HTTP 401 = wrong app-specific password; "no calendar named" = different name.
 
-## 4. Tarcza
+## 4. Watch face
 
-Przytrzymaj tarczę → Edytuj → Komplikacje → wybierz miejsce → **Kalendarz** (wersja z tekstem
-wydarzenia, np. „Najbliższe wydarzenie”). Najlepsze są tarcze z dużym polem tekstowym, np. Modułowa,
-Infograf Modułowy, Kalifornia.
+Easiest on the iPhone: Watch app → **Face Gallery** → a face with a large text field, e.g.
+**Modular** or **Modular Duo** → Complications → the large middle field → **Calendar → Your Schedule**
+→ Add. ("Today's Date" shows only the date.)
 
-Drugi tester: udostępnij mu kalendarz Glukoza w iCloud (Kalendarz → (i) przy Glukoza → Dodaj osobę).
+To show only the glucose calendar on the Watch: Watch app → My Watch → Calendar → **Custom** → leave
+only Glukoza ticked. The Calendar app on the Watch then hides your other events too.
+
+Another person: share the Glukoza calendar with them in iCloud (Calendar → (i) next to Glukoza →
+Add Person).
