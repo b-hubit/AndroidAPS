@@ -20,7 +20,8 @@ Każdy build zawiera wszystko z wcześniejszych buildów tej samej linii zmian
 | 1522067 | 23.11.2026 | AAPS Live | `ios-live-activity` | [`19bf4c4`](https://github.com/b-hubit/AndroidAPS/commit/19bf4c4) | Adres webhooka nie znika już z Ustawień iOS przy starcie | wygaszony |
 | 1522097 | 23.11.2026 | AAPS Live | `ios-live-activity` | [`640d4df`](https://github.com/b-hubit/AndroidAPS/commit/640d4df) | Glukoza w jednej linii + licznik czasu (błąd: pusty pasek) | wygaszony |
 | 1522118 | 23.11.2026 | AAPS Live | `ios-live-activity` | [`9a6b1b6`](https://github.com/b-hubit/AndroidAPS/commit/9a6b1b6) | Godzina odczytu zamiast licznika – pasek znowu widoczny | wygaszony |
-| 1522547 | 23.11.2026 | AAPS Live | `ios-live-activity` | [`bcf2d50`](https://github.com/b-hubit/AndroidAPS/commit/bcf2d50) | „3' temu” zamiast godziny, minuty odświeżane przez Home Assistant | **aktualny** |
+| 1522547 | 23.11.2026 | AAPS Live | `ios-live-activity` | [`bcf2d50`](https://github.com/b-hubit/AndroidAPS/commit/bcf2d50) | „3' temu” zamiast godziny, minuty odświeżane przez Home Assistant | aktywny |
+| 1522607 | 23.11.2026 | AAPS Live | `ios-live-activity` | [`be85022`](https://github.com/b-hubit/AndroidAPS/commit/be85022) | Osobny pasek dla każdego iPhone'a – kilka osób może obserwować jednocześnie (aplikacja wysyła identyfikator urządzenia) | **aktualny** |
 
 ## Gałęzie
 
