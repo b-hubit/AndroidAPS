@@ -28,6 +28,8 @@ struct GlucoseLiveActivity: Widget {
                         Text(state.value.isEmpty ? "--" : state.value)
                             .font(.system(size: 34, weight: .bold, design: .rounded))
                             .foregroundStyle(state.color)
+                            .lineLimit(1)
+                            .fixedSize(horizontal: true, vertical: false)
                         Text(state.arrow).font(.title2).foregroundStyle(state.color)
                     }
                 }
@@ -44,12 +46,15 @@ struct GlucoseLiveActivity: Widget {
                 Text(state.value.isEmpty ? "--" : state.value)
                     .font(.system(.body, design: .rounded).bold())
                     .foregroundStyle(state.color)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
             } compactTrailing: {
                 Text(state.arrow).foregroundStyle(state.color)
             } minimal: {
                 Text(state.value.isEmpty ? "--" : state.value)
                     .font(.system(.caption, design: .rounded).bold())
                     .foregroundStyle(state.color)
+                    .lineLimit(1)
                     .minimumScaleFactor(0.6)
             }
         }
@@ -71,6 +76,8 @@ private struct LockScreenView: View {
                 Text(state.value.isEmpty ? "--" : state.value)
                     .font(.system(size: 30, weight: .bold, design: .rounded))
                     .foregroundStyle(state.color)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
                 VStack(alignment: .leading, spacing: 0) {
                     Text(state.arrow).font(.headline).foregroundStyle(state.color)
                     Text(state.delta).font(.caption2)
@@ -86,6 +93,9 @@ private struct LockScreenView: View {
                     Text(state.value.isEmpty ? "--" : state.value)
                         .font(.system(size: 48, weight: .bold, design: .rounded))
                         .foregroundStyle(state.color)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                        .fixedSize(horizontal: true, vertical: false)
                     Text(state.arrow)
                         .font(.system(size: 30, weight: .semibold))
                         .foregroundStyle(state.color)
@@ -104,14 +114,20 @@ private struct LockScreenView: View {
     }
 }
 
-/// "3 min" - counts up by itself on the device, so it stays right between pushes.
+/// "4:05 temu" - a timer that counts up by itself on the device, so it stays right between pushes.
+/// `.relative` would read "4 min, 5 secs" in the system's words and take twice the room.
 private struct AgeText: View {
     let state: GlucoseActivityAttributes.ContentState
 
     var body: some View {
         if state.readingTime > 0 {
-            Text(Date(timeIntervalSince1970: state.readingTime), style: .relative)
-                .monospacedDigit()
+            HStack(spacing: 3) {
+                Text(Date(timeIntervalSince1970: state.readingTime), style: .timer)
+                    .monospacedDigit()
+                    .fixedSize()
+                Text("temu")
+            }
+            .lineLimit(1)
         } else {
             Text("")
         }
