@@ -1,5 +1,6 @@
 import ActivityKit
 import Foundation
+import UIKit
 
 /// b-hubit fork (branch ios-live-activity): keeps one glucose Live Activity running and tells the
 /// user's Home Assistant where to push to.
@@ -127,7 +128,9 @@ final class LiveActivityController {
         var body: [String: String] = [
             "kind": kind,
             "token": token,
-            "bundle_id": Bundle.main.bundleIdentifier ?? ""
+            "bundle_id": Bundle.main.bundleIdentifier ?? "",
+            // Lets Home Assistant keep one Live Activity per iPhone when several people follow.
+            "device": UIDevice.current.identifierForVendor?.uuidString ?? "default"
         ]
         if let activityId { body["activity_id"] = activityId }
 

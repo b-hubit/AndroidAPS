@@ -5,8 +5,9 @@ b-hubit fork (branch ios-live-activity): pushes glucose from Nightscout to the A
 Runs inside Home Assistant (shell_command), which already has everything it needs: Python with PyJWT
 and cryptography. Nothing leaves your own systems except the push itself, which goes to Apple.
 
-    aaps_live_activity.py register <start|update> <token> [activity_id]
-        Called by the webhook automation when the iPhone app reports a push token.
+    aaps_live_activity.py register <start|update> <token> [activity_id] [device]
+        Called by the webhook automation when an iPhone reports a push token. Every iPhone (device
+        id from the app) gets its own Live Activity, so several people can follow at once.
     aaps_live_activity.py tick
         Called every 30 seconds. Sends a push when Nightscout has a new reading, and starts a new
         Live Activity when the current one is close to the 8 hour limit iOS sets.
@@ -242,43 +243,68 @@ def end_payload():
     return {"aps": {"timestamp": now, "event": "end", "dismissal-date": now}}
 
 
-def tick(cfg, state, force=False):
+DEVICE_KEYS = ("start_token", "update_token", "activity_id", "started_at",
+               "last_reading_time", "last_age", "last_start_push")
+DEVICE_RE = re.compile(r"^[A-Za-z0-9-]{1,64}$")
+
+
+def devices(state):
+    """Per-iPhone state. Every phone that opens the app gets its own Live Activity and tokens.
+
+    A state file from the single-phone version is moved under "default", the name an app build
+    without a device id registers as.
+    """
+    devs = state.setdefault("devices", {})
+    if any(k in state for k in DEVICE_KEYS):
+        old = {k: state.pop(k) for k in DEVICE_KEYS if k in state}
+        devs.setdefault("default", {}).update(old)
+    return devs
+
+
+def tick(cfg, state, force_device=None):
     content = read_nightscout(cfg)
     if content is None:
         log("no reading in Nightscout")
         return
-    now = time.time()
-    new_reading = content["readingTime"] != state.get("last_reading_time")
+    devs = devices(state)
+    if not devs:
+        log("no iPhone registered yet - open the app with the webhook set")
+    for name, dev in list(devs.items()):
+        tick_device(cfg, state, name, dev, content, force=(name == force_device))
 
-    update_token = state.get("update_token")
-    started_at = state.get("started_at", 0)
+
+def tick_device(cfg, state, name, dev, content, force=False):
+    now = time.time()
+    new_reading = content["readingTime"] != dev.get("last_reading_time")
+
+    update_token = dev.get("update_token")
+    started_at = dev.get("started_at", 0)
 
     # Close to the 8 hour limit: end the old activity and start the next one by push.
-    if state.get("start_token") and (not update_token or now - started_at > RESTART_AFTER_S):
+    if dev.get("start_token") and (not update_token or now - started_at > RESTART_AFTER_S):
         if update_token:
             send_push(cfg, state, update_token, end_payload())
-        if not update_token and now - state.get("last_start_push", 0) < 60 * 60:
+        if not update_token and now - dev.get("last_start_push", 0) < 60 * 60:
             pass  # a start was sent recently; wait for the app to report the new activity's token
         else:
-            status, text = send_push(cfg, state, state["start_token"], start_payload(content))
-            state["last_start_push"] = now
-            state.pop("update_token", None)
+            status, text = send_push(cfg, state, dev["start_token"], start_payload(content))
+            dev["last_start_push"] = now
+            dev.pop("update_token", None)
             if token_is_dead(status, text):
-                state.pop("start_token", None)
+                dev.pop("start_token", None)
             if status == 200:
-                log("started a new Live Activity")
-                state["last_reading_time"] = content["readingTime"]
+                log(f"{name}: started a new Live Activity")
+                dev["last_reading_time"] = content["readingTime"]
             return
 
     if not update_token:
-        log("no Live Activity token yet - open the app on the iPhone with the webhook set")
         return
 
     age = age_text(content["readingTime"], now)
     if new_reading or force:
         # A new reading: high priority, counted against the budget iOS gives the app.
         priority = 10
-    elif age != state.get("last_age") and now - content["readingTime"] < AGE_UPDATES_FOR_S:
+    elif age != dev.get("last_age") and now - content["readingTime"] < AGE_UPDATES_FOR_S:
         # Only the minutes changed: low priority, which iOS does not count against the budget and
         # may deliver a little later. Keeps "3' temu" right without an always-running timer view.
         priority = 5
@@ -286,29 +312,41 @@ def tick(cfg, state, force=False):
         return
     status, text = send_push(cfg, state, update_token, update_payload(content), priority=priority)
     if status == 200:
-        state["last_reading_time"] = content["readingTime"]
-        state["last_age"] = age
+        dev["last_reading_time"] = content["readingTime"]
+        dev["last_age"] = age
         if priority == 10:
-            log(f"pushed {content['value']} {content['arrow']}")
+            log(f"{name}: pushed {content['value']} {content['arrow']}")
     elif token_is_dead(status, text):
-        state.pop("update_token", None)
+        dev.pop("update_token", None)
 
 
-def register(cfg, state, kind, token, activity_id):
+def register(cfg, state, kind, token, activity_id, device):
     if not TOKEN_RE.match(token):
         log("ignored a token that is not hex")
         return
+    if not DEVICE_RE.match(device or ""):
+        device = "default"
+    devs = devices(state)
+    if device != "default" and "default" in devs:
+        # The entry of an app build that sent no device id. Once a phone reports one, that build is
+        # gone from it; keeping the entry would push to a dead activity and restart it every 8 hours.
+        del devs["default"]
+    dev = devs.setdefault(device, {})
     if kind == "start":
-        state["start_token"] = token
-        log("push-to-start token stored")
+        dev["start_token"] = token
+        # The same phone under another name (an older app build registered as "default"): drop that
+        # entry, or the phone would get every push twice and a second Live Activity every 8 hours.
+        for other in [n for n, d in devs.items() if n != device and d.get("start_token") == token]:
+            del devs[other]
+        log(f"{device}: push-to-start token stored")
     elif kind == "update":
-        if activity_id != state.get("activity_id") or token != state.get("update_token"):
-            if activity_id != state.get("activity_id"):
-                state["started_at"] = time.time()
-            state["activity_id"] = activity_id
-            state["update_token"] = token
-            log(f"update token stored for activity {activity_id}")
-        tick(cfg, state, force=True)
+        if activity_id != dev.get("activity_id") or token != dev.get("update_token"):
+            if activity_id != dev.get("activity_id"):
+                dev["started_at"] = time.time()
+            dev["activity_id"] = activity_id
+            dev["update_token"] = token
+            log(f"{device}: update token stored for activity {activity_id}")
+        tick(cfg, state, force_device=device)
     else:
         log(f"unknown token kind {kind}")
 
@@ -326,19 +364,21 @@ def main(argv):
         state = load_json(STATE_FILE, {})
         command = argv[1]
         if command == "register" and len(argv) >= 4:
-            register(cfg, state, argv[2], argv[3].strip().lower(), argv[4] if len(argv) > 4 else "")
+            register(cfg, state, argv[2], argv[3].strip().lower(),
+                     argv[4] if len(argv) > 4 else "", argv[5] if len(argv) > 5 else "default")
         elif command == "tick":
             tick(cfg, state)
         elif command == "status":
             now = time.time()
-            print(json.dumps({
-                "update_token": bool(state.get("update_token")),
-                "start_token": bool(state.get("start_token")),
-                "activity_id": state.get("activity_id"),
-                "activity_age_min": round((now - state["started_at"]) / 60) if state.get("started_at") else None,
+            print(json.dumps({name: {
+                "update_token": bool(dev.get("update_token")),
+                "start_token": bool(dev.get("start_token")),
+                "activity_id": dev.get("activity_id"),
+                "activity_age_min": round((now - dev["started_at"]) / 60) if dev.get("started_at") else None,
                 "last_pushed_reading_min_ago":
-                    round((now - state["last_reading_time"]) / 60) if state.get("last_reading_time") else None,
-            }, indent=2))
+                    round((now - dev["last_reading_time"]) / 60) if dev.get("last_reading_time") else None,
+            } for name, dev in devices(state).items()}, indent=2))
+            save_state(state)
             return 0
         elif command == "test":
             content = read_nightscout(cfg)

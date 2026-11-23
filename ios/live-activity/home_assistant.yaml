@@ -6,7 +6,7 @@
 shell_command:
   aaps_live_register: >-
     python3 /config/aaps_live/aaps_live_activity.py register
-    {{ kind }} {{ token }} {{ activity_id }}
+    {{ kind }} {{ token }} {{ activity_id }} {{ device }}
   aaps_live_tick: python3 /config/aaps_live/aaps_live_activity.py tick
   # Check only: Developer tools > Actions > shell_command.aaps_live_test shows the output.
   # (The Terminal & SSH add-on has no python3; shell_command runs inside Home Assistant, which has.)
@@ -31,6 +31,7 @@ automation:
           kind: "{{ trigger.json.kind }}"
           token: "{{ trigger.json.token }}"
           activity_id: "{{ trigger.json.activity_id | default('-') }}"
+          device: "{{ trigger.json.device | default('default') }}"
 
   - alias: "AAPS Live: nowy odczyt"
     id: aaps_live_tick
