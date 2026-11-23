@@ -29,7 +29,7 @@ struct GlucoseLiveActivity: Widget {
                             .font(.system(size: 34, weight: .bold, design: .rounded))
                             .foregroundStyle(state.color)
                             .lineLimit(1)
-                            .fixedSize(horizontal: true, vertical: false)
+                            .minimumScaleFactor(0.6)
                         Text(state.arrow).font(.title2).foregroundStyle(state.color)
                     }
                 }
@@ -47,7 +47,7 @@ struct GlucoseLiveActivity: Widget {
                     .font(.system(.body, design: .rounded).bold())
                     .foregroundStyle(state.color)
                     .lineLimit(1)
-                    .fixedSize(horizontal: true, vertical: false)
+                    .minimumScaleFactor(0.6)
             } compactTrailing: {
                 Text(state.arrow).foregroundStyle(state.color)
             } minimal: {
@@ -77,7 +77,7 @@ private struct LockScreenView: View {
                     .font(.system(size: 30, weight: .bold, design: .rounded))
                     .foregroundStyle(state.color)
                     .lineLimit(1)
-                    .fixedSize(horizontal: true, vertical: false)
+                    .minimumScaleFactor(0.6)
                 VStack(alignment: .leading, spacing: 0) {
                     Text(state.arrow).font(.headline).foregroundStyle(state.color)
                     Text(state.delta).font(.caption2)
@@ -95,7 +95,6 @@ private struct LockScreenView: View {
                         .foregroundStyle(state.color)
                         .lineLimit(1)
                         .minimumScaleFactor(0.6)
-                        .fixedSize(horizontal: true, vertical: false)
                     Text(state.arrow)
                         .font(.system(size: 30, weight: .semibold))
                         .foregroundStyle(state.color)
@@ -114,20 +113,17 @@ private struct LockScreenView: View {
     }
 }
 
-/// "4:05 temu" - a timer that counts up by itself on the device, so it stays right between pushes.
-/// `.relative` would read "4 min, 5 secs" in the system's words and take twice the room.
+/// The time of the reading, "01:12". Fixed text: a counting `.timer` text stretches to all the width
+/// it is offered, and with the value beside it the Live Activity drew nothing at all. Old data is
+/// still obvious - the whole view dims once the reading is past its stale date.
 private struct AgeText: View {
     let state: GlucoseActivityAttributes.ContentState
 
     var body: some View {
         if state.readingTime > 0 {
-            HStack(spacing: 3) {
-                Text(Date(timeIntervalSince1970: state.readingTime), style: .timer)
-                    .monospacedDigit()
-                    .fixedSize()
-                Text("temu")
-            }
-            .lineLimit(1)
+            Text(Date(timeIntervalSince1970: state.readingTime), style: .time)
+                .monospacedDigit()
+                .lineLimit(1)
         } else {
             Text("")
         }
