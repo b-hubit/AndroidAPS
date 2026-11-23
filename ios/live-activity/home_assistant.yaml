@@ -12,6 +12,9 @@ shell_command:
   # (The Terminal & SSH add-on has no python3; shell_command runs inside Home Assistant, which has.)
   aaps_live_test: python3 /config/aaps_live/aaps_live_activity.py test
   aaps_live_status: python3 /config/aaps_live/aaps_live_activity.py status
+  # Branch komplikacja: glucose on the watch face through the Calendar complication.
+  aaps_calendar_tick: python3 /config/aaps_live/aaps_calendar.py tick
+  aaps_calendar_test: python3 /config/aaps_live/aaps_calendar.py test
 
 automation:
   - alias: "AAPS Live: token z iPhone"
@@ -41,3 +44,4 @@ automation:
         seconds: "/30"
     actions:
       - action: shell_command.aaps_live_tick
+      - action: shell_command.aaps_calendar_tick
