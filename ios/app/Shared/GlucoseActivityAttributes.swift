@@ -30,6 +30,9 @@ struct GlucoseActivityAttributes: ActivityAttributes {
         /// Low and high limits in mg/dL for the colour.
         var low: Int
         var high: Int
+        /// Minutes since the reading, "3' temu", refreshed by Home Assistant once a minute. Optional,
+        /// so pushes from a script without it still decode.
+        var age: String? = nil
 
         static let placeholder = ContentState(
             value: "", mgdl: 0, arrow: "", delta: "", readingTime: 0, iob: "", cob: "", low: 70, high: 180

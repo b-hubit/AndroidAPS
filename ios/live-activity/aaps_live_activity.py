@@ -40,6 +40,8 @@ RESTART_AFTER_S = 7 * 3600 + 45 * 60
 JWT_LIFETIME_S = 50 * 60
 # The Lock Screen greys the value out this long after the reading.
 STALE_AFTER_S = 11 * 60
+# "3' temu" is refreshed by low-priority pushes once a minute, for this long after the reading.
+AGE_UPDATES_FOR_S = 60 * 60
 
 ARROWS = {
     "DoubleUp": "⇈", "SingleUp": "↑", "FortyFiveUp": "↗", "Flat": "→",
@@ -205,8 +207,17 @@ def token_is_dead(status, text):
 # Commands
 # ---------------------------------------------------------------------------------------------------
 
+def age_text(reading_time, now=None):
+    """ "3' temu" - whole minutes since the reading, as AAPS shows it. """
+    if not reading_time:
+        return ""
+    minutes = int(((now or time.time()) - reading_time) // 60)
+    return "teraz" if minutes < 1 else f"{minutes}' temu"
+
+
 def update_payload(content):
     now = int(time.time())
+    content = dict(content, age=age_text(content["readingTime"], now))
     return {"aps": {
         "timestamp": now,
         "event": "update",
@@ -262,12 +273,23 @@ def tick(cfg, state, force=False):
     if not update_token:
         log("no Live Activity token yet - open the app on the iPhone with the webhook set")
         return
-    if not (new_reading or force):
+
+    age = age_text(content["readingTime"], now)
+    if new_reading or force:
+        # A new reading: high priority, counted against the budget iOS gives the app.
+        priority = 10
+    elif age != state.get("last_age") and now - content["readingTime"] < AGE_UPDATES_FOR_S:
+        # Only the minutes changed: low priority, which iOS does not count against the budget and
+        # may deliver a little later. Keeps "3' temu" right without an always-running timer view.
+        priority = 5
+    else:
         return
-    status, text = send_push(cfg, state, update_token, update_payload(content))
+    status, text = send_push(cfg, state, update_token, update_payload(content), priority=priority)
     if status == 200:
         state["last_reading_time"] = content["readingTime"]
-        log(f"pushed {content['value']} {content['arrow']}")
+        state["last_age"] = age
+        if priority == 10:
+            log(f"pushed {content['value']} {content['arrow']}")
     elif token_is_dead(status, text):
         state.pop("update_token", None)
 

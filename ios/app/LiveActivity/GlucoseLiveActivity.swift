@@ -113,14 +113,17 @@ private struct LockScreenView: View {
     }
 }
 
-/// The time of the reading, "01:12". Fixed text: a counting `.timer` text stretches to all the width
-/// it is offered, and with the value beside it the Live Activity drew nothing at all. Old data is
-/// still obvious - the whole view dims once the reading is past its stale date.
+/// "3' temu": minutes since the reading, sent by Home Assistant once a minute (a counting `.timer`
+/// text stretched to all the width it got and blanked the whole Live Activity). Without that field
+/// the time of the reading is shown instead. Old data is still obvious - the view dims once the
+/// reading is past its stale date.
 private struct AgeText: View {
     let state: GlucoseActivityAttributes.ContentState
 
     var body: some View {
-        if state.readingTime > 0 {
+        if let age = state.age, !age.isEmpty {
+            Text(age).monospacedDigit().lineLimit(1)
+        } else if state.readingTime > 0 {
             Text(Date(timeIntervalSince1970: state.readingTime), style: .time)
                 .monospacedDigit()
                 .lineLimit(1)
