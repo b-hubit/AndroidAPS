@@ -33,6 +33,9 @@ struct GlucoseActivityAttributes: ActivityAttributes {
         /// Minutes since the reading, "3' temu", refreshed by Home Assistant once a minute. Optional,
         /// so pushes from a script without it still decode.
         var age: String? = nil
+        /// When Home Assistant sent this update, Unix seconds. Lets the view tell "the reading is old"
+        /// (updates still arrive) from "updates stopped" (the stale date passed). Optional, as above.
+        var updated: Double? = nil
 
         static let placeholder = ContentState(
             value: "", mgdl: 0, arrow: "", delta: "", readingTime: 0, iob: "", cob: "", low: 70, high: 180

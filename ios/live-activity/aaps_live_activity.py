@@ -39,10 +39,13 @@ LOCK_FILE = os.path.join(HERE, ".lock")
 RESTART_AFTER_S = 7 * 3600 + 45 * 60
 # Apple wants the provider token refreshed at most once per 20 minutes and at least once per hour.
 JWT_LIFETIME_S = 50 * 60
-# The Lock Screen greys the value out this long after the reading.
-STALE_AFTER_S = 11 * 60
+# Every push says "if nothing newer comes within this time, show the data as stale". Pushes come at
+# least once a minute (the "3' temu" text), so passing it means the updates stopped: the app then
+# shows a red (!). 5 minutes leaves room for low-priority pushes that iOS delivers late.
+STALE_AFTER_S = 5 * 60
 # "3' temu" is refreshed by low-priority pushes once a minute, for this long after the reading.
-AGE_UPDATES_FOR_S = 60 * 60
+# As long as an activity lives, so a missing reading shows as an orange warning, not as "no updates".
+AGE_UPDATES_FOR_S = 8 * 3600
 
 ARROWS = {
     "DoubleUp": "⇈", "SingleUp": "↑", "FortyFiveUp": "↗", "Flat": "→",
@@ -213,17 +216,21 @@ def age_text(reading_time, now=None):
     if not reading_time:
         return ""
     minutes = int(((now or time.time()) - reading_time) // 60)
-    return "teraz" if minutes < 1 else f"{minutes}' temu"
+    if minutes < 1:
+        return "teraz"
+    if minutes < 60:
+        return f"{minutes}' temu"
+    return f"{minutes // 60} h {minutes % 60}' temu"
 
 
 def update_payload(content):
     now = int(time.time())
-    content = dict(content, age=age_text(content["readingTime"], now))
+    content = dict(content, age=age_text(content["readingTime"], now), updated=now)
     return {"aps": {
         "timestamp": now,
         "event": "update",
         "content-state": content,
-        "stale-date": int(content["readingTime"]) + STALE_AFTER_S if content["readingTime"] else now + STALE_AFTER_S,
+        "stale-date": now + STALE_AFTER_S,
     }}
 
 

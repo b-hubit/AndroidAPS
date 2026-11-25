@@ -32,11 +32,16 @@ struct GlucoseLiveActivity: Widget {
                             .minimumScaleFactor(0.6)
                         Text(state.arrow).font(.title2).foregroundStyle(state.color)
                     }
+                    .opacity(state.dimmed(context.isStale) ? 0.5 : 1)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
                     VStack(alignment: .trailing, spacing: 2) {
                         Text(state.delta).font(.headline)
-                        AgeText(state: state).font(.caption).foregroundStyle(.secondary)
+                        HStack(spacing: 3) {
+                            WarningIcon(state: state, isStale: context.isStale)
+                            AgeText(state: state, isStale: context.isStale)
+                        }
+                        .font(.caption).foregroundStyle(.secondary)
                     }
                 }
                 DynamicIslandExpandedRegion(.bottom) {
@@ -49,7 +54,11 @@ struct GlucoseLiveActivity: Widget {
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
             } compactTrailing: {
-                Text(state.arrow).foregroundStyle(state.color)
+                if state.warning(context.isStale) != nil {
+                    WarningIcon(state: state, isStale: context.isStale)
+                } else {
+                    Text(state.arrow).foregroundStyle(state.color)
+                }
             } minimal: {
                 Text(state.value.isEmpty ? "--" : state.value)
                     .font(.system(.caption, design: .rounded).bold())
@@ -69,23 +78,30 @@ private struct LockScreenView: View {
     let isStale: Bool
     @Environment(\.activityFamily) private var family
 
+    private var dim: Bool { state.dimmed(isStale) }
+
     var body: some View {
         switch family {
         case .small:
             HStack(spacing: 6) {
-                Text(state.value.isEmpty ? "--" : state.value)
-                    .font(.system(size: 30, weight: .bold, design: .rounded))
-                    .foregroundStyle(state.color)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.6)
-                VStack(alignment: .leading, spacing: 0) {
-                    Text(state.arrow).font(.headline).foregroundStyle(state.color)
-                    Text(state.delta).font(.caption2)
+                HStack(spacing: 6) {
+                    Text(state.value.isEmpty ? "--" : state.value)
+                        .font(.system(size: 30, weight: .bold, design: .rounded))
+                        .foregroundStyle(state.color)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text(state.arrow).font(.headline).foregroundStyle(state.color)
+                        Text(state.delta).font(.caption2)
+                    }
                 }
+                .opacity(dim ? 0.5 : 1)
                 Spacer(minLength: 0)
-                AgeText(state: state).font(.caption2).foregroundStyle(.secondary)
+                VStack(alignment: .trailing, spacing: 0) {
+                    WarningIcon(state: state, isStale: isStale).font(.caption)
+                    AgeText(state: state, isStale: isStale).font(.caption2).foregroundStyle(.secondary)
+                }
             }
-            .opacity(isStale ? 0.5 : 1)
             .padding(.horizontal, 6)
         default:
             HStack(alignment: .center, spacing: 12) {
@@ -99,29 +115,35 @@ private struct LockScreenView: View {
                         .font(.system(size: 30, weight: .semibold))
                         .foregroundStyle(state.color)
                 }
+                .opacity(dim ? 0.5 : 1)
                 VStack(alignment: .leading, spacing: 4) {
                     Text(state.delta).font(.title3.weight(.semibold)).foregroundStyle(.white)
-                    AgeText(state: state).font(.subheadline).foregroundStyle(.white.opacity(0.7))
+                        .opacity(dim ? 0.5 : 1)
+                    HStack(spacing: 4) {
+                        WarningIcon(state: state, isStale: isStale)
+                        AgeText(state: state, isStale: isStale)
+                    }
+                    .font(.subheadline).foregroundStyle(.white.opacity(0.7))
                 }
                 Spacer(minLength: 0)
                 DetailsColumn(state: state)
+                    .opacity(dim ? 0.5 : 1)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
-            .opacity(isStale ? 0.5 : 1)
         }
     }
 }
 
 /// "3' temu": minutes since the reading, sent by Home Assistant once a minute (a counting `.timer`
-/// text stretched to all the width it got and blanked the whole Live Activity). Without that field
-/// the time of the reading is shown instead. Old data is still obvious - the view dims once the
-/// reading is past its stale date.
+/// text stretched to all the width it got and blanked the whole Live Activity). Without that field,
+/// or when updates stopped (the text would be frozen and wrong), the time of the reading is shown.
 private struct AgeText: View {
     let state: GlucoseActivityAttributes.ContentState
+    let isStale: Bool
 
     var body: some View {
-        if let age = state.age, !age.isEmpty {
+        if !isStale, let age = state.age, !age.isEmpty {
             Text(age).monospacedDigit().lineLimit(1)
         } else if state.readingTime > 0 {
             Text(Date(timeIntervalSince1970: state.readingTime), style: .time)
@@ -158,7 +180,42 @@ private struct DetailsRow: View {
     }
 }
 
+/// Something is wrong with the data, shown next to the age:
+/// - red (!)  : no update from Home Assistant for a few minutes - the automation stopped, Home
+///              Assistant or Nightscout is down, or the iPhone is offline. The age is frozen, so the
+///              time of the reading is shown instead.
+/// - orange ⚠ : updates arrive, but the newest reading in Nightscout is older than 11 minutes -
+///              the sensor, the phone with AAPS or its upload is the problem.
+private struct WarningIcon: View {
+    let state: GlucoseActivityAttributes.ContentState
+    let isStale: Bool
+
+    var body: some View {
+        switch state.warning(isStale) {
+        case .noUpdates:
+            Image(systemName: "exclamationmark.circle.fill").foregroundStyle(.red)
+        case .oldReading:
+            Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+        case nil:
+            EmptyView()
+        }
+    }
+}
+
+enum DataWarning { case noUpdates, oldReading }
+
 private extension GlucoseActivityAttributes.ContentState {
+    /// A reading older than this is "old", as Nightscout and AAPS treat it.
+    static let oldAfter: Double = 11 * 60
+
+    func warning(_ isStale: Bool) -> DataWarning? {
+        if isStale { return .noUpdates }
+        if let updated, readingTime > 0, updated - readingTime > Self.oldAfter { return .oldReading }
+        return nil
+    }
+
+    func dimmed(_ isStale: Bool) -> Bool { warning(isStale) != nil }
+
     var color: Color {
         guard mgdl > 0 else { return .gray }
         if mgdl < low { return .red }
